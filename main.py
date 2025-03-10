@@ -1,20 +1,30 @@
 from Services import *
-from Functions import *
+from functions import *
 from openai import OpenAI
+from google import genai
+
 import config
 
 def main():
-    client = OpenAI(api_key= config.OPENAI_API_KEY)
+    OpenAIClient = OpenAI(api_key= config.OPENAI_API_KEY)
+    genAIClient =  genai.Client(api_key= config.GENAI_API_KEY)
 
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        store=True,
-        messages=[
-            {"role": "user", "content": "write a haiku about ai"}
-        ]
-    )
+    # response = genAIClient.models.generate_content(
+    #     model="gemini-2.0-flash",
+    #     contents="Explain how AI works",
+    # )
 
-    print(completion.choices[0].message)
+    # print(response.text)
+
+    # completion = OpenAIClient.chat.completions.create(
+    #     model="gpt-4o-mini",
+    #     store=True,
+    #     messages=[
+    #         {"role": "user", "content": "how many races are there?"}
+    #     ]
+    # )
+
+    # print(completion.choices[0].message)
 
 if __name__ == "__main__":
     main()
