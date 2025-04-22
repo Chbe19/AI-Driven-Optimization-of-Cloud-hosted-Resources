@@ -71,9 +71,8 @@ class ModelBuilding:
             test = pd.DataFrame(self.X_test.copy())
             test[self.target] = self.y_test  # Add the actual target values to the test DataFrame
             test['prediction'] = self.model.predict(self.X_test)
-
             self.data = self.data.merge(test[['prediction']], how='left', left_index=True, right_index=True)
-            
+            self.data.dropna(inplace=True)  # Drop rows with NaN values
             # Plot the results
             ax = test[[self.target]].plot(figsize=(15, 5))
             self.data['prediction'].plot(ax=ax, style='.')

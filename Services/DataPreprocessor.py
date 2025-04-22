@@ -1,5 +1,6 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
 
 class DataPreprocessor:
     """
@@ -33,12 +34,26 @@ class DataPreprocessor:
         Returns:
             tuple: A tuple containing the training and testing DataFrames.
         """
+        if self.data_frame.index.duplicated().any():
+            print("Duplicate index labels detected. Aggregating duplicates by taking the mean.")
+            self.data_frame = self.data_frame.groupby(self.data_frame.index).mean()
+        full_index = pd.date_range(start=self.data_frame.index.min(), end=self.data_frame.index.max(), freq='H')  # Adjust frequency as needed
+        missing_dates = full_index.difference(self.data_frame.index)
+
+        print(f"Missing dates: {len(missing_dates)}")
+        print(missing_dates)
+        # Reindex the DataFrame to include all dates and fill missing values
+        self.data_frame = self.data_frame.reindex(full_index)
+        self.data_frame = self.data_frame.fillna(method='ffill')  # Forward-fill missing values
+        
         train, test = train_test_split(
             self.data_frame,
             test_size=self.split_percentage,
             random_state=100,
             shuffle=False  # Ensure the time series order is preserved
         )
+
+       
         self.training_set = train
         self.testing_set = test
     
