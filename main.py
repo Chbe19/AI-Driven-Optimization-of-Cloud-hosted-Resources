@@ -14,6 +14,8 @@ def main():
     test_x, test_y = data.get_testing_set('PJMW_MW')
     dataPost = data.get_data_frame()
     
+    print(dataPost.head())
+
     model_xgboost = ModelBuilding(
         "xgboost",
         train_x,
@@ -26,9 +28,9 @@ def main():
     )   
     # model_arima = ModelBuilding(
     #     model_type="arima",
-    #     X_train=None,  # ARIMA doesn't use features, so pass None
+    #     X_train=train_x,  # ARIMA doesn't use features, so pass None
     #     y_train=train_y,
-    #     X_test=None,   # ARIMA doesn't use features, so pass None
+    #     X_test=test_x,   # ARIMA doesn't use features, so pass None
     #     y_test=test_y,
     #     features=None,
     #     target="CPU"
