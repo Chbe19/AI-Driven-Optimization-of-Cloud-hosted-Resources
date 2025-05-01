@@ -14,25 +14,60 @@ def main():
     test_x, test_y = data.get_testing_set('PJMW_MW')
     dataPost = data.get_data_frame()
     
-    model_xgboost = ModelBuilding(
-        "xgboost",
-        train_x,
-        train_y,
-        test_x,
-        test_y,
-        data.features,
-        'PJMW_MW',
-        dataPost
-    )   
-    # model_arima = ModelBuilding(
-    #     model_type="arima",
-    #     X_train=None,  # ARIMA doesn't use features, so pass None
-    #     y_train=train_y,
-    #     X_test=None,   # ARIMA doesn't use features, so pass None
-    #     y_test=test_y,
-    #     features=None,
-    #     target="CPU"
-    #)
+    # model_xgboost = ModelBuilding(
+    #     "xgboost",
+    #     train_x,
+    #     train_y,
+    #     test_x,
+    #     test_y,
+    #     data.features,
+    #     'PJMW_MW',
+    #     dataPost
+    # )   
+
+    model_arima = ModelBuilding(
+        model_type="arima",
+        X_train=None,  # ARIMA doesn't use features, so pass None
+        y_train=train_y,
+        X_test=None,   # ARIMA doesn't use features, so pass None
+        y_test=test_y,
+        features=None,
+        target="CPU"
+    )
+
+    # model_lstm = ModelBuilding(
+    # "lstm",
+    # train_x,
+    # train_y,
+    # test_x,
+    # test_y,
+    # data.features,
+    # 'PJMW_MW',
+    # dataPost
+    # )
+
+    # model_cnn = ModelBuilding(
+    # "cnn",
+    # train_x,
+    # train_y,
+    # test_x,
+    # test_y,
+    # data.features,
+    # 'PJMW_MW',
+    # dataPost
+    # )
+
+    # model_cnn_lstm = ModelBuilding(
+    # "cnn-lstm",
+    # train_x,
+    # train_y,
+    # test_x,
+    # test_y,
+    # data.features,
+    # 'PJMW_MW',
+    # dataPost
+    # )
+
 
 if __name__ == "__main__":
     main()
