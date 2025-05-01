@@ -103,8 +103,8 @@ class ModelBuilding:
             self.y_train = self.y_train.groupby(self.y_train.index).mean()
             self.y_test = self.y_test.groupby(self.y_test.index).mean()
             # Assign the hourly frequency
-            self.y_train = self.y_train.asfreq('h', method='ffill')  # Forward-fill missing values
-            self.y_test = self.y_test.asfreq('h', method='ffill')
+            self.y_train = self.y_train.asfreq('h').ffill()  # Forward-fill missing values
+            self.y_test = self.y_test.asfreq('h').ffill()  # Forward-fill missing values
             
             scaler = MinMaxScaler()
             self.y_train = pd.Series(scaler.fit_transform(self.y_train.values.reshape(-1, 1)).flatten(), index=self.y_train.index)
@@ -112,6 +112,16 @@ class ModelBuilding:
             
             self.y_test = self.y_test.dropna()
             self.y_train = self.y_train.dropna()  # Drop NaN values         
+
+            # Differencing the data to make it stationary
+            self.y_train = self.y_train.diff().dropna()
+            self.y_test = self.y_test.diff().dropna()
+
+            # Ensure indices are aligned between y_train and X_train
+            self.X_train, self.y_train = self.X_train.align(self.y_train, join='inner', axis=0)
+
+            # Ensure indices are aligned between y_test and X_test (if needed later)
+            self.X_test, self.y_test = self.X_test.align(self.y_test, join='inner', axis=0)
 
             # Check for stationarity
             plot_acf(self.y_train, lags=50)
@@ -142,6 +152,7 @@ class ModelBuilding:
             forecast = self.model.forecast(steps=len(self.y_test))
             plt.figure(figsize=(10, 6))
             plt.plot(self.y_test.index, self.y_test, label="Actual")
+            plt.plot(self.y_test.index, forecast, label="Forecast", linestyle="--")
             plt.plot(self.y_test.index, forecast, label="Forecast", linestyle="--")
             plt.title("ARIMA Forecast vs Actual")
             plt.legend()

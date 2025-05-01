@@ -26,6 +26,18 @@ class DataPreprocessor:
                 if self.data_frame[col].dtype == 'object':  # Check if column contains strings
                     self.data_frame[col] = self.data_frame[col].str.replace('%', '').astype(float)
         self.data_frame = self.data_frame.dropna()
+        if self.data_frame.index.duplicated().any():
+            print("Duplicate index labels detected. Aggregating duplicates by taking the mean.")
+            self.data_frame = self.data_frame.groupby(self.data_frame.index).mean()
+        full_index = pd.date_range(start=self.data_frame.index.min(), end=self.data_frame.index.max(), freq='h')  # Adjust frequency as needed
+        missing_dates = full_index.difference(self.data_frame.index)
+
+        print(f"Missing dates: {len(missing_dates)}")
+        print(missing_dates)
+        # Reindex the DataFrame to include all dates and fill missing values
+        self.data_frame = self.data_frame.reindex(full_index)
+        self.data_frame = self.data_frame.ffill()  # Forward-fill missing values
+        
 
     def split(self):
         """
@@ -34,18 +46,7 @@ class DataPreprocessor:
         Returns:
             tuple: A tuple containing the training and testing DataFrames.
         """
-        if self.data_frame.index.duplicated().any():
-            print("Duplicate index labels detected. Aggregating duplicates by taking the mean.")
-            self.data_frame = self.data_frame.groupby(self.data_frame.index).mean()
-        full_index = pd.date_range(start=self.data_frame.index.min(), end=self.data_frame.index.max(), freq='H')  # Adjust frequency as needed
-        missing_dates = full_index.difference(self.data_frame.index)
 
-        print(f"Missing dates: {len(missing_dates)}")
-        print(missing_dates)
-        # Reindex the DataFrame to include all dates and fill missing values
-        self.data_frame = self.data_frame.reindex(full_index)
-        self.data_frame = self.data_frame.fillna(method='ffill')  # Forward-fill missing values
-        
         train, test = train_test_split(
             self.data_frame,
             test_size=self.split_percentage,
