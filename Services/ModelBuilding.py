@@ -12,7 +12,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Conv1D, MaxPooling1D, Flatten
+from tensorflow.keras.layers import LSTM, Dense, Conv1D, MaxPooling1D, Flatten, Dropout
 
 
 class ModelBuilding:
@@ -317,7 +317,9 @@ class ModelBuilding:
             model = Sequential([
                 tf.keras.layers.Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=(input_timesteps, features)),
                 tf.keras.layers.MaxPooling1D(pool_size=2),
-                tf.keras.layers.LSTM(50, activation='relu'),
+                tf.keras.layers.Dropout(0.3),
+                tf.keras.layers.LSTM(50, activation='relu', return_sequences=False),
+                tf.keras.layers.Dropout(0.3),
                 tf.keras.layers.Dense(32, activation='relu'),
                 tf.keras.layers.Dense(output_steps)
             ])

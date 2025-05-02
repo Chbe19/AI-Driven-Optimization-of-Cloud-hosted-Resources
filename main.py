@@ -5,7 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 def main():
-    df = pd.read_csv('data/synthetic_cpu_day_2025.csv', index_col=0, parse_dates=True)
+    df = pd.read_csv('data/synthetic_cpu_month_2025.csv', index_col=0, parse_dates=True)
 
     data = DataPreprocessor(df, 0.2)
     features = ['month','day','hour', 'minute']
