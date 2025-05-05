@@ -110,6 +110,8 @@ class ModelBuilding:
             print(f'RMSE Score on Test set: {score:0.2f}')
             print("Mean of y_test:", self.y_test.mean())
             print("Standard Deviation of y_test:", self.y_test.std())
+            relative_error = (score / self.y_test.mean()) * 100
+            print(f"Relative Error: {relative_error:.2f}%")
  
         elif model_type.lower() == "arima":
             # ARIMA implementation
@@ -181,198 +183,198 @@ class ModelBuilding:
             rmse = np.sqrt(mean_squared_error(self.y_test, forecast))
             print(f"RMSE: {rmse}")
 
-        # elif model_type.lower() == "lstm":
-        #     print("Fitting LSTM model...")
-        #     start_time = time.time()
+        elif model_type.lower() == "lstm":
+            print("Fitting LSTM model...")
+            start_time = time.time()
 
-        #     # Scale target
-        #     scaler = MinMaxScaler()
-        #     y_train_scaled = scaler.fit_transform(self.y_train.values.reshape(-1, 1))
-        #     y_test_scaled = scaler.transform(self.y_test.values.reshape(-1, 1))
+            # Scale target
+            scaler = MinMaxScaler()
+            y_train_scaled = scaler.fit_transform(self.y_train.values.reshape(-1, 1))
+            y_test_scaled = scaler.transform(self.y_test.values.reshape(-1, 1))
 
-        #     # LSTM behöver sekvenser (X timsteg bakåt för att förutsäga nästa steg)
-        #     def create_sequences(X, y, time_steps=24):
-        #         Xs, ys = [], []
-        #         for i in range(len(X) - time_steps):
-        #             v = X.iloc[i:(i + time_steps)].values
-        #             Xs.append(v)
-        #             ys.append(y[i + time_steps])
-        #         return np.array(Xs), np.array(ys)
+            # LSTM behöver sekvenser (X timsteg bakåt för att förutsäga nästa steg)
+            def create_sequences(X, y, time_steps=24):
+                Xs, ys = [], []
+                for i in range(len(X) - time_steps):
+                    v = X.iloc[i:(i + time_steps)].values
+                    Xs.append(v)
+                    ys.append(y[i + time_steps])
+                return np.array(Xs), np.array(ys)
 
-        #     TIME_STEPS = 24  # T.ex., använd 24 timmar bakåt för att förutsäga nästa
+            TIME_STEPS = 24  # T.ex., använd 24 timmar bakåt för att förutsäga nästa
 
-        #     X_train_seq, y_train_seq = create_sequences(self.X_train, y_train_scaled, TIME_STEPS)
-        #     X_test_seq, y_test_seq = create_sequences(self.X_test, y_test_scaled, TIME_STEPS)
+            X_train_seq, y_train_seq = create_sequences(self.X_train, y_train_scaled, TIME_STEPS)
+            X_test_seq, y_test_seq = create_sequences(self.X_test, y_test_scaled, TIME_STEPS)
 
-        #     # Skapa LSTM-modellen
-        #     model = Sequential()
-        #     model.add(tf.keras.Input(shape=(X_train_seq.shape[1], X_train_seq.shape[2]))) 
-        #     model.add(LSTM(64, activation='relu', return_sequences=True))  # Lägg till en LSTM som lämnar sekvenser
-        #     model.add(LSTM(32, activation='relu'))
-        #     model.add(Dense(1))
-        #     model.compile(optimizer='adam', loss='mse')
+            # Skapa LSTM-modellen
+            model = Sequential()
+            model.add(tf.keras.Input(shape=(X_train_seq.shape[1], X_train_seq.shape[2]))) 
+            model.add(LSTM(64, activation='relu', return_sequences=True))  # Lägg till en LSTM som lämnar sekvenser
+            model.add(LSTM(32, activation='relu'))
+            model.add(Dense(1))
+            model.compile(optimizer='adam', loss='mse')
 
-        #     # Träna modellen
-        #     history = model.fit(
-        #         X_train_seq, 
-        #         y_train_seq, 
-        #         epochs=20, 
-        #         batch_size=64, 
-        #         validation_split=0.1, 
-        #         verbose=1
-        #         )
+            # Träna modellen
+            history = model.fit(
+                X_train_seq, 
+                y_train_seq, 
+                epochs=20, 
+                batch_size=64, 
+                validation_split=0.1, 
+                verbose=1
+                )
 
-        #     self.model = model  # Spara modellen
+            self.model = model  # Spara modellen
 
-        #     # Prediktera
-        #     y_pred_scaled = model.predict(X_test_seq)
-        #     y_pred = scaler.inverse_transform(y_pred_scaled)
+            # Prediktera
+            y_pred_scaled = model.predict(X_test_seq)
+            y_pred = scaler.inverse_transform(y_pred_scaled)
 
-        #     # Justera test-indexet för att matcha sekvensen
-        #     test_index = self.y_test.index[TIME_STEPS:]
+            # Justera test-indexet för att matcha sekvensen
+            test_index = self.y_test.index[TIME_STEPS:]
 
-        #     plt.figure(figsize=(15, 5))
-        #     plt.plot(test_index, self.y_test.iloc[TIME_STEPS:], label='Actual')
-        #     plt.plot(test_index, y_pred.flatten(), label='Predicted')
-        #     plt.legend()
-        #     plt.title('LSTM Prediction vs Actual')
-        #     plt.show()
+            plt.figure(figsize=(15, 5))
+            plt.plot(test_index, self.y_test.iloc[TIME_STEPS:], label='Actual')
+            plt.plot(test_index, y_pred.flatten(), label='Predicted')
+            plt.legend()
+            plt.title('LSTM Prediction vs Actual')
+            plt.show()
 
-        #     rmse = np.sqrt(mean_squared_error(self.y_test.iloc[TIME_STEPS:], y_pred.flatten()))
-        #     print(f"RMSE: {rmse}")
-        #     end_time = time.time()
-        #     print(f"Process LSTM took {end_time - start_time:.2f} seconds.")
+            rmse = np.sqrt(mean_squared_error(self.y_test.iloc[TIME_STEPS:], y_pred.flatten()))
+            print(f"RMSE: {rmse}")
+            end_time = time.time()
+            print(f"Process LSTM took {end_time - start_time:.2f} seconds.")
     
-        # elif model_type.lower() == "cnn":
-        #     print("Fitting CNN model...")
-        #     start_time = time.time()
-        #     TIME_STEPS = 24
-        #     output_steps = 1
+        elif model_type.lower() == "cnn":
+            print("Fitting CNN model...")
+            start_time = time.time()
+            TIME_STEPS = 24
+            output_steps = 1
 
-        #     #Förberedelser
-        #     # Scale target
-        #     scaler = MinMaxScaler()
-        #     y_train_scaled = scaler.fit_transform(self.y_train.values.reshape(-1, 1))
-        #     y_test_scaled = scaler.transform(self.y_test.values.reshape(-1, 1))
+            #Förberedelser
+            # Scale target
+            scaler = MinMaxScaler()
+            y_train_scaled = scaler.fit_transform(self.y_train.values.reshape(-1, 1))
+            y_test_scaled = scaler.transform(self.y_test.values.reshape(-1, 1))
 
-        #     def create_sequences(X, y, time_steps=24):
-        #         Xs, ys = [], []
-        #         for i in range(len(X) - time_steps):
-        #             v = X.iloc[i:(i + time_steps)].values
-        #             Xs.append(v)
-        #             ys.append(y[i + time_steps])
-        #         return np.array(Xs), np.array(ys)
-            
-        #     X_train_seq, y_train_seq = create_sequences(self.X_train, y_train_scaled, TIME_STEPS)
-        #     X_test_seq, y_test_seq = create_sequences(self.X_test, y_test_scaled, TIME_STEPS)
+            def create_sequences(X, y, time_steps=24):
+                Xs, ys = [], []
+                for i in range(len(X) - time_steps):
+                    v = X.iloc[i:(i + time_steps)].values
+                    Xs.append(v)
+                    ys.append(y[i + time_steps])
+                return np.array(Xs), np.array(ys)
+          
+            X_train_seq, y_train_seq = create_sequences(self.X_train, y_train_scaled, TIME_STEPS)
+            X_test_seq, y_test_seq = create_sequences(self.X_test, y_test_scaled, TIME_STEPS)
 
-        #     input_timesteps = X_train_seq.shape[1]  # 24
-        #     features = X_train_seq.shape[2]   
+            input_timesteps = X_train_seq.shape[1]  # 24
+            features = X_train_seq.shape[2]   
 
-        #     # Bygger modellen
-        #     model = Sequential([
-        #         Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=(input_timesteps, features)),
-        #         MaxPooling1D(pool_size=2),
-        #         Conv1D(filters=128, kernel_size=3, activation='relu'),
-        #         Flatten(),
-        #         Dense(64, activation='relu'),
-        #         Dense(output_steps)  # No activation -> regression output
-        #     ])
-            
-        #     model.compile(optimizer='adam',
-        #       loss='mse',      # Mean Squared Error is typical for forecasting
-        #       metrics=['mae']) # Mean Absolute Error also useful to track
+            # Bygger modellen
+            model = Sequential([
+                Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=(input_timesteps, features)),
+                MaxPooling1D(pool_size=2),
+                Conv1D(filters=128, kernel_size=3, activation='relu'),
+                Flatten(),
+                Dense(64, activation='relu'),
+                Dense(output_steps)  # No activation -> regression output
+            ])
+          
+            model.compile(optimizer='adam',
+              loss='mse',      # Mean Squared Error is typical for forecasting
+              metrics=['mae']) # Mean Absolute Error also useful to track
 
-        #     model.summary()
+            model.summary()
 
-        #     # Träna
-        #     model.fit(X_train_seq, y_train_seq, epochs=10, batch_size=32, validation_split=0.2, verbose=1)
+            # Träna
+            model.fit(X_train_seq, y_train_seq, epochs=10, batch_size=32, validation_split=0.2, verbose=1)
 
-        #     self.model = model
+            self.model = model
 
-        #     # Prediktera
-        #     y_pred_scaled = model.predict(X_test_seq)
-        #     y_pred = scaler.inverse_transform(y_pred_scaled)
+            # Prediktera
+            y_pred_scaled = model.predict(X_test_seq)
+            y_pred = scaler.inverse_transform(y_pred_scaled)
 
-        #     test_index = self.y_test.index[TIME_STEPS:]
+            test_index = self.y_test.index[TIME_STEPS:]
 
-        #     plt.figure(figsize=(15, 5))
-        #     plt.plot(test_index, self.y_test.iloc[TIME_STEPS:], label='Actual')
-        #     plt.plot(test_index, y_pred.flatten(), label='Predicted')
-        #     plt.legend()
-        #     plt.title('CNN Prediction vs Actual')
-        #     plt.show()
+            plt.figure(figsize=(15, 5))
+            plt.plot(test_index, self.y_test.iloc[TIME_STEPS:], label='Actual')
+            plt.plot(test_index, y_pred.flatten(), label='Predicted')
+            plt.legend()
+            plt.title('CNN Prediction vs Actual')
+            plt.show()
 
-        #     rmse = np.sqrt(mean_squared_error(self.y_test.iloc[TIME_STEPS:], y_pred.flatten()))
-        #     print(f"RMSE: {rmse}")
-        #     end_time = time.time()
-        #     print(f"Process CNN took {end_time - start_time:.2f} seconds.")
+            rmse = np.sqrt(mean_squared_error(self.y_test.iloc[TIME_STEPS:], y_pred.flatten()))
+            print(f"RMSE: {rmse}")
+            end_time = time.time()
+            print(f"Process CNN took {end_time - start_time:.2f} seconds.")
 
-        # elif model_type.lower() == "cnn-lstm":
-        #     print("Fitting CNN-LSTM model...")
-        #     start_time = time.time()
-        #     TIME_STEPS = 24
-        #     output_steps = 1
+        elif model_type.lower() == "cnn-lstm":
+            print("Fitting CNN-LSTM model...")
+            start_time = time.time()
+            TIME_STEPS = 24
+            output_steps = 1
 
-        #     #Förberedelser
-        #     # Scale target
-        #     scaler = MinMaxScaler()
-        #     y_train_scaled = scaler.fit_transform(self.y_train.values.reshape(-1, 1))
-        #     y_test_scaled = scaler.transform(self.y_test.values.reshape(-1, 1))
+            #Förberedelser
+            # Scale target
+            scaler = MinMaxScaler()
+            y_train_scaled = scaler.fit_transform(self.y_train.values.reshape(-1, 1))
+            y_test_scaled = scaler.transform(self.y_test.values.reshape(-1, 1))
 
-        #     def create_sequences(X, y, time_steps=24):
-        #         Xs, ys = [], []
-        #         for i in range(len(X) - time_steps):
-        #             v = X.iloc[i:(i + time_steps)].values
-        #             Xs.append(v)
-        #             ys.append(y[i + time_steps])
-        #         return np.array(Xs), np.array(ys)
-            
-        #     X_train_seq, y_train_seq = create_sequences(self.X_train, y_train_scaled, TIME_STEPS)
-        #     X_test_seq, y_test_seq = create_sequences(self.X_test, y_test_scaled, TIME_STEPS)
+            def create_sequences(X, y, time_steps=24):
+                Xs, ys = [], []
+                for i in range(len(X) - time_steps):
+                    v = X.iloc[i:(i + time_steps)].values
+                    Xs.append(v)
+                    ys.append(y[i + time_steps])
+                return np.array(Xs), np.array(ys)
+          
+            X_train_seq, y_train_seq = create_sequences(self.X_train, y_train_scaled, TIME_STEPS)
+            X_test_seq, y_test_seq = create_sequences(self.X_test, y_test_scaled, TIME_STEPS)
 
-        #     input_timesteps = X_train_seq.shape[1]  # 24
-        #     features = X_train_seq.shape[2]   
+            input_timesteps = X_train_seq.shape[1]  # 24
+            features = X_train_seq.shape[2]   
 
-        #     # Bygger modellen
-        #     model = Sequential([
-        #         tf.keras.layers.Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=(input_timesteps, features)),
-        #         tf.keras.layers.MaxPooling1D(pool_size=2),
-        #         tf.keras.layers.Dropout(0.3),
-        #         tf.keras.layers.LSTM(50, activation='relu', return_sequences=False),
-        #         tf.keras.layers.Dropout(0.3),
-        #         tf.keras.layers.Dense(32, activation='relu'),
-        #         tf.keras.layers.Dense(output_steps)
-        #     ])
-            
-        #     model.compile(optimizer='adam',
-        #       loss='mse',      # Mean Squared Error is typical for forecasting
-        #       metrics=['mae']) # Mean Absolute Error also useful to track
+            # Bygger modellen
+            model = Sequential([
+                tf.keras.layers.Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=(input_timesteps, features)),
+                tf.keras.layers.MaxPooling1D(pool_size=2),
+                tf.keras.layers.Dropout(0.3),
+                tf.keras.layers.LSTM(50, activation='relu', return_sequences=False),
+                tf.keras.layers.Dropout(0.3),
+                tf.keras.layers.Dense(32, activation='relu'),
+                tf.keras.layers.Dense(output_steps)
+            ])
+          
+            model.compile(optimizer='adam',
+              loss='mse',      # Mean Squared Error is typical for forecasting
+              metrics=['mae']) # Mean Absolute Error also useful to track
 
-        #     model.summary()
+            model.summary()
 
-        #     # Träna
-        #     model.fit(X_train_seq, y_train_seq, epochs=10, batch_size=32, validation_split=0.2, verbose=1)
+            # Träna
+            model.fit(X_train_seq, y_train_seq, epochs=10, batch_size=32, validation_split=0.2, verbose=1)
 
-        #     self.model = model
+            self.model = model
 
-        #     # Prediktera
-        #     y_pred_scaled = model.predict(X_test_seq)
-        #     y_pred = scaler.inverse_transform(y_pred_scaled)
+            # Prediktera
+            y_pred_scaled = model.predict(X_test_seq)
+            y_pred = scaler.inverse_transform(y_pred_scaled)
 
-        #     test_index = self.y_test.index[TIME_STEPS:]
+            test_index = self.y_test.index[TIME_STEPS:]
 
-        #     plt.figure(figsize=(15, 5))
-        #     plt.plot(test_index, self.y_test.iloc[TIME_STEPS:], label='Actual')
-        #     plt.plot(test_index, y_pred.flatten(), label='Predicted')
-        #     plt.legend()
-        #     plt.title('CNN-LSTM Prediction vs Actual')
-        #     plt.show()
+            plt.figure(figsize=(15, 5))
+            plt.plot(test_index, self.y_test.iloc[TIME_STEPS:], label='Actual')
+            plt.plot(test_index, y_pred.flatten(), label='Predicted')
+            plt.legend()
+            plt.title('CNN-LSTM Prediction vs Actual')
+            plt.show()
 
-        #     rmse = np.sqrt(mean_squared_error(self.y_test.iloc[TIME_STEPS:], y_pred.flatten()))
-        #     print(f"RMSE: {rmse}")
-        #     end_time = time.time()
-        #     print(f"Process CNN-LSTM took {end_time - start_time:.2f} seconds.")
+            rmse = np.sqrt(mean_squared_error(self.y_test.iloc[TIME_STEPS:], y_pred.flatten()))
+            print(f"RMSE: {rmse}")
+            end_time = time.time()
+            print(f"Process CNN-LSTM took {end_time - start_time:.2f} seconds.")
 
         else:
             raise ValueError(f"Unsupported model type: {model_type}")
