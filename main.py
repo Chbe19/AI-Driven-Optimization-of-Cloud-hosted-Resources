@@ -5,7 +5,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 def main():
-    df = pd.read_csv('data/synthetic_cpu_month_2025.csv', index_col=0, parse_dates=True)
+    #remove_empty_rows('data/vmCloud_data_filtered.csv', 'data/vmCloud_data_cleaned.csv')
+    df = pd.read_csv('data/cpu_usage_full_period.csv', index_col=0, parse_dates=True)
 
     data = DataPreprocessor(df, 0.2)
     features = ['month','day','hour', 'minute']
@@ -14,16 +15,16 @@ def main():
     test_x, test_y = data.get_testing_set('cpu')
     dataPost = data.get_data_frame()
     
-    # model_xgboost = ModelBuilding(
-    #       "xgboost",
-    #       train_x,
-    #       train_y,
-    #       test_x,
-    #       test_y,
-    #       data.features,
-    #       'cpu',
-    #       dataPost
-    #   )   
+    model_xgboost = ModelBuilding(
+           "xgboost",
+           train_x,
+           train_y,
+           test_x,
+           test_y,
+           data.features,
+           'cpu',
+           dataPost
+       )   
 
     # model_arima = ModelBuilding(
     #      model_type="arima",
@@ -57,16 +58,17 @@ def main():
     #     dataPost
     # )
 
-    model_cnn_lstm = ModelBuilding(
-     "cnn-lstm",
-     train_x,
-     train_y,
-     test_x,
-     test_y,
-     data.features,
-     'cpu',
-     dataPost
-     )
+    # model_cnn_lstm = ModelBuilding(
+    #  "cnn-lstm",
+    #  train_x,
+    #  train_y,
+    #  test_x,
+    #  test_y,
+    #  data.features,
+    #  'cpu',
+    #  dataPost
+    #  )
+
 
 
 if __name__ == "__main__":

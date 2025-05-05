@@ -1,6 +1,7 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
 
 class DataPreprocessor:
     """
@@ -13,6 +14,7 @@ class DataPreprocessor:
         self.training_set = None
         self.testing_set = None
         self.features = None
+        self.scaler = MinMaxScaler()
         self.clean()
         self.split()
 
@@ -29,7 +31,7 @@ class DataPreprocessor:
         if self.data_frame.index.duplicated().any():
             print("Duplicate index labels detected. Aggregating duplicates by taking the mean.")
             self.data_frame = self.data_frame.groupby(self.data_frame.index).mean()
-        full_index = pd.date_range(start=self.data_frame.index.min(), end=self.data_frame.index.max(), freq='h')  # Adjust frequency as needed
+        full_index = pd.date_range(start=self.data_frame.index.min(), end=self.data_frame.index.max(), freq='30T')  # Adjust frequency as needed
         missing_dates = full_index.difference(self.data_frame.index)
 
         print(f"Missing dates: {len(missing_dates)}")
