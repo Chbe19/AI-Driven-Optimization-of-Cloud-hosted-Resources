@@ -9,8 +9,10 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 import time
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import RandomizedSearchCV
-
+from sklearn.model_selection import RandomizedSearchCV, GridSearchCV, KFold
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.svm import SVR
+from pmdarima import auto_arima 
 
 # import tensorflow as tf
 # from tensorflow.keras.models import Sequential
@@ -32,77 +34,14 @@ class ModelBuilding:
         self.data = data
         self.initialize_model(model_type)
 
-
     def initialize_model(self, model_type):
         if model_type.lower() == "xgboost":
-            print("Fitting xgboost model...")
-
-            # Scale y_train
-            scaler = MinMaxScaler()
-            self.y_train = pd.Series(scaler.fit_transform(self.y_train.values.reshape(-1, 1)).flatten(), index=self.y_train.index)
-            self.y_test = pd.Series(scaler.transform(self.y_test.values.reshape(-1, 1)).flatten(), index=self.y_test.index)
-
-            # Add lagged features and rolling statistics to both X_train and X_test
-            for lag in range(1, 3):  # Add lagged features (e.g., lag_1, lag_2)
-                self.X_train[f'cpu_lag_{lag}'] = self.y_train.shift(lag)
-                #self.X_test[f'cpu_lag_{lag}'] = self.y_test.shift(lag)
-
-            self.X_train['cpu_rolling_mean_3'] = self.y_train.rolling(window=3).mean()
-            #self.X_test['cpu_rolling_mean_3'] = self.y_test.rolling(window=3).mean()
-
-            self.X_train['cpu_rolling_std_3'] = self.y_train.rolling(window=3).std()
-            #self.X_test['cpu_rolling_std_3'] = self.y_test.rolling(window=3).std()
-
-            # Drop rows with NaN values caused by lagging and rolling operations
-            self.X_train = self.X_train.dropna()
-            self.X_test = self.X_test.dropna()
-
-            # Align y_train and y_test with X_train and X_test after dropping NaN rows
-            self.X_train, self.y_train = self.X_train.align(self.y_train, join='inner', axis=0)
-            self.X_test, self.y_test = self.X_test.align(self.y_test, join='inner', axis=0)
-
-            # Tune and train the model
-            best_params, self.model = self.tune_xgboost(self.X_train, self.y_train)
-            self.model.fit(
-                self.X_train,
-                self.y_train,
-                eval_set=[(self.X_train, self.y_train), (self.X_test, self.y_test)],
-                verbose=100
-            )
-            fi = pd.DataFrame(data=self.model.feature_importances_,
-                            index=self.model.feature_names_in_,
-                            columns=['importance'])
-            fi.sort_values('importance').plot(kind='barh', title='Feature Importance')
-
-            # Create a DataFrame for the test set
-            test = pd.DataFrame(self.X_test.copy())
-            test[self.target] = self.y_test  # Add the actual target values to the test DataFrame
-            test['prediction'] = self.model.predict(self.X_test)
-            self.data = self.data.merge(test[['prediction']], how='left', left_index=True, right_index=True)
-            self.data.dropna(inplace=True)  # Drop rows with NaN values
-  
-            # Plot the results
-            ax = test[[self.target]].plot(figsize=(15, 5))
-            test['prediction'].plot(ax=ax, style='--')
-            plt.legend(['Truth Data', 'Predictions'])
-            ax.set_title('XGBOOST: Raw Data and Prediction')
-            plt.show()
-
-            # Calculate RMSE
-            score = np.sqrt(mean_squared_error(test[self.target], test['prediction']))
-            print(f'RMSE Score on Test set: {score:0.2f}')
-            print("Mean of y_test:", self.y_test.mean())
-            print("Standard Deviation of y_test:", self.y_test.std())
-            relative_error = (score / self.y_test.mean()) * 100
-            print(f"Relative Error: {relative_error:.2f}%")
+            self.model_xgboost()
  
         elif model_type.lower() == "arima":
             # ARIMA implementation
             print("Fitting ARIMA model...")
             
-            self.y_train = self.y_train.loc[self.y_train.index >= (self.y_train.index[-1] - pd.DateOffset(years=1))]
-            self.y_test = self.y_test.loc[self.y_test.index >= (self.y_test.index[-1] - pd.DateOffset(years=1))]
-            #------------------------------------------------------------------ SKA TAS BORT MED NÄR VI FÅTT RIKTIGT DATA 
             # Check for duplicate indices
             self.y_train = self.y_train.sort_index()
             self.y_test = self.y_test.sort_index()
@@ -118,10 +57,6 @@ class ModelBuilding:
             
             self.y_test = self.y_test.dropna()
             self.y_train = self.y_train.dropna()  # Drop NaN values         
-
-            # Differencing the data to make it stationary
-            self.y_train = self.y_train.diff().dropna()
-            self.y_test = self.y_test.diff().dropna()
 
             # Ensure indices are aligned between y_train and X_train
             self.X_train, self.y_train = self.X_train.align(self.y_train, join='inner', axis=0)
@@ -144,8 +79,15 @@ class ModelBuilding:
             # plt.show()
             #------------------------------------------------------
             start_time = time.time()
-            self.model = SARIMAX(self.y_train, order=(5, 0, 2), seasonal_order=(1, 1, 1, 48))  # Example order (p=5, d=0, q=2) season (P,D=1,Q,s)
-            self.model = self.model.fit()
+            self.model = auto_arima(
+                self.y_train,
+                seasonal=True,
+                m=48,  # Seasonal period (e.g., 48 for half-hourly data with daily seasonality)
+                trace=True,  # Print the model selection process
+                error_action='ignore',  # Ignore errors and continue
+                suppress_warnings=True,  # Suppress warnings
+                stepwise=True,  # Use stepwise search to reduce computation time
+            )
             end_time = time.time()
             print(f"Model fitting took {end_time - start_time:.2f} seconds.")
 
@@ -155,7 +97,7 @@ class ModelBuilding:
 
             # Forecast on the test set
             #.predict() ?
-            forecast = self.model.forecast(steps=len(self.y_test))
+            forecast = self.model.predict(n_periods=len(self.y_test))
 
             forecast = scaler.inverse_transform(forecast.values.reshape(-1, 1)).flatten()
             y_test_original = scaler.inverse_transform(self.y_test.values.reshape(-1, 1)).flatten()
@@ -169,6 +111,11 @@ class ModelBuilding:
             plt.show()
             rmse = np.sqrt(mean_squared_error(self.y_test, forecast))
             print(f"RMSE: {rmse}")
+        
+        elif model_type.lower() == "randomforest":
+            self.model_randomforest()
+        elif model_type.lower() == "svr":
+            self.model_svr()
 
         # elif model_type.lower() == "lstm":
         #     print("Fitting LSTM model...")
@@ -375,6 +322,68 @@ class ModelBuilding:
         """
         return self.model
 
+    def model_xgboost(self):
+        print("Fitting xgboost model...")
+
+        # Scale y_train
+        scaler = MinMaxScaler()
+        self.y_train = pd.Series(scaler.fit_transform(self.y_train.values.reshape(-1, 1)).flatten(), index=self.y_train.index)
+        self.y_test = pd.Series(scaler.transform(self.y_test.values.reshape(-1, 1)).flatten(), index=self.y_test.index)
+
+        # Add lagged features and rolling statistics to both X_train and X_test
+        for lag in range(1, 3):  # Add lagged features (e.g., lag_1, lag_2)
+            self.X_train[f'cpu_lag_{lag}'] = self.y_train.shift(lag)
+            self.X_test[f'cpu_lag_{lag}'] = self.y_test.shift(lag)
+
+        self.X_train['cpu_rolling_mean_3'] = self.y_train.rolling(window=3).mean()
+        self.X_test['cpu_rolling_mean_3'] = self.y_test.rolling(window=3).mean()
+
+        self.X_train['cpu_rolling_std_3'] = self.y_train.rolling(window=3).std()
+        self.X_test['cpu_rolling_std_3'] = self.y_test.rolling(window=3).std()
+
+        # Drop rows with NaN values caused by lagging and rolling operations
+        self.X_train = self.X_train.dropna()
+        self.X_test = self.X_test.dropna()
+
+        # Align y_train and y_test with X_train and X_test after dropping NaN rows
+        self.X_train, self.y_train = self.X_train.align(self.y_train, join='inner', axis=0)
+        self.X_test, self.y_test = self.X_test.align(self.y_test, join='inner', axis=0)
+
+        # Tune and train the model
+        best_params, self.model = self.tune_xgboost(self.X_train, self.y_train)
+        self.model.fit(
+            self.X_train,
+            self.y_train,
+            eval_set=[(self.X_train, self.y_train), (self.X_test, self.y_test)],
+            verbose=100
+        )
+        fi = pd.DataFrame(data=self.model.feature_importances_,
+                        index=self.model.feature_names_in_,
+                        columns=['importance'])
+        fi.sort_values('importance').plot(kind='barh', title='Feature Importance')
+
+        # Create a DataFrame for the test set
+        test = pd.DataFrame(self.X_test.copy())
+        test[self.target] = scaler.inverse_transform(self.y_test.values.reshape(-1, 1)).flatten()  # Inverse transform y_test
+        test['prediction'] = scaler.inverse_transform(self.model.predict(self.X_test).reshape(-1, 1)).flatten()  # Inverse transform predictions
+        self.data = self.data.merge(test[['prediction']], how='left', left_index=True, right_index=True)
+        self.data.dropna(inplace=True)  # Drop rows with NaN values
+        
+        # Plot the results
+        ax = test[[self.target]].plot(figsize=(15, 5))
+        test['prediction'].plot(ax=ax, style='--')
+        plt.legend(['Truth Data', 'Predictions'])
+        ax.set_title('XGBOOST: Raw Data and Prediction')
+        plt.show()
+
+        # Calculate RMSE
+        score = np.sqrt(mean_squared_error(test[self.target], test['prediction']))
+        print(f'RMSE Score on Test set: {score:0.2f}')
+        print("Mean of y_test:", test[self.target].mean())  # Use inverse-transformed y_test
+        print("Standard Deviation of y_test:", test[self.target].std())  # Use inverse-transformed y_test
+        relative_error = (score / test[self.target].mean()) * 100
+        print(f"Relative Error: {relative_error:.2f}%")        
+
     def tune_xgboost(self, X_train, y_train):
         """
         Perform hyperparameter tuning for XGBoost using RandomizedSearchCV.
@@ -400,6 +409,8 @@ class ModelBuilding:
             'reg_lambda': [1.0, 1.5, 2.0, 3.0],
         }
 
+        kf = KFold(n_splits=4, shuffle=True, random_state=0)
+
         # Initialize the XGBoost regressor
         xgb_model = xgb.XGBRegressor(objective='reg:squarederror', random_state=42, booster='gbtree',)
 
@@ -409,7 +420,7 @@ class ModelBuilding:
             param_distributions=param_grid,
             n_iter=50,  # Number of random combinations to try
             scoring='neg_mean_squared_error',  # Use negative MSE as the scoring metric
-            cv=3,  # 3-fold cross-validation
+            cv=kf,  # 3-fold cross-validation
             verbose=1,  # Print progress
             n_jobs=-1,  # Use all available CPU cores
             random_state=42
@@ -426,3 +437,234 @@ class ModelBuilding:
         print("Best RMSE (negative MSE):", np.sqrt(-random_search.best_score_))
 
         return best_params, best_model
+    
+    def model_randomforest(self):
+        print("Fitting Random Forest model...")
+
+        # Scale y_train
+        scaler = MinMaxScaler()
+        self.y_train = pd.Series(scaler.fit_transform(self.y_train.values.reshape(-1, 1)).flatten(), index=self.y_train.index)
+        self.y_test = pd.Series(scaler.transform(self.y_test.values.reshape(-1, 1)).flatten(), index=self.y_test.index)
+
+        # Add lagged features and rolling statistics to both X_train and X_test
+        for lag in range(1, 3):  # Add lagged features (e.g., lag_1, lag_2)
+            self.X_train[f'cpu_lag_{lag}'] = self.y_train.shift(lag)
+            self.X_test[f'cpu_lag_{lag}'] = self.y_test.shift(lag)
+
+        self.X_train['cpu_rolling_mean_3'] = self.y_train.rolling(window=3).mean()
+        self.X_test['cpu_rolling_mean_3'] = self.y_test.rolling(window=3).mean()
+
+        self.X_train['cpu_rolling_std_3'] = self.y_train.rolling(window=3).std()
+        self.X_test['cpu_rolling_std_3'] = self.y_test.rolling(window=3).std()
+
+        # Drop rows with NaN values caused by lagging and rolling operations
+        self.X_train = self.X_train.dropna()
+        self.X_test = self.X_test.dropna()
+
+        # Align y_train and y_test with X_train and X_test after dropping NaN rows
+        self.X_train, self.y_train = self.X_train.align(self.y_train, join='inner', axis=0)
+        self.X_test, self.y_test = self.X_test.align(self.y_test, join='inner', axis=0)
+
+        # Tune and train the model
+        best_params, self.model = self.tune_randomforest(self.X_train, self.y_train)
+        self.model.fit(self.X_train, self.y_train)
+
+        # Feature Importance
+        importances = self.model.feature_importances_
+        feature_names = self.X_train.columns
+        importance_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
+        importance_df = importance_df.sort_values(by='Importance', ascending=False)
+
+        # Plot feature importance
+        importance_df.plot(kind='barh', x='Feature', y='Importance', title='Feature Importance (Random Forest)', figsize=(10, 6))
+        plt.show()
+
+        # Predict
+        y_pred_scaled = self.model.predict(self.X_test)
+
+        # Ensure predictions are reshaped correctly for inverse transformation
+        y_pred_scaled = y_pred_scaled.reshape(-1, 1)
+        y_pred = scaler.inverse_transform(y_pred_scaled).flatten()
+
+        # Create a DataFrame for the test set
+        test = pd.DataFrame(self.X_test.copy())
+        test[self.target] = scaler.inverse_transform(self.y_test.values.reshape(-1, 1)).flatten()  # Inverse transform y_test
+        test['prediction'] = y_pred
+        self.data = self.data.merge(test[['prediction']], how='left', left_index=True, right_index=True)
+        self.data.dropna(inplace=True)  # Drop rows with NaN values
+
+        # Plot the results
+        ax = test[[self.target]].plot(figsize=(15, 5))
+        test['prediction'].plot(ax=ax, style='--')
+        plt.legend(['Truth Data', 'Predictions'])
+        ax.set_title('Random Forest: Raw Data and Prediction')
+        plt.show()
+
+        # Calculate RMSE
+        score = np.sqrt(mean_squared_error(test[self.target], test['prediction']))
+        print(f'RMSE Score on Test set: {score:0.2f}')
+        print("Mean of y_test:", test[self.target].mean())
+        print("Standard Deviation of y_test:", test[self.target].std())
+        relative_error = (score / test[self.target].mean()) * 100
+        print(f"Relative Error: {relative_error:.2f}%")
+
+    def tune_randomforest(self, X_train, y_train):
+        """
+        Perform hyperparameter tuning for RandomForestRegressor using RandomizedSearchCV.
+
+        Args:
+            X_train (pd.DataFrame): Training features.
+            y_train (pd.Series): Training target.
+
+        Returns:
+            dict: Best parameters from the search.
+            RandomForestRegressor: Best Random Forest model.
+        """
+        # Define the parameter grid
+        param_grid = {
+            'n_estimators': [100, 200, 500, 1000],  # Number of trees in the forest
+            'max_depth': [None, 10, 20, 30, 50],  # Maximum depth of the tree
+            'min_samples_split': [2, 5, 10],  # Minimum number of samples required to split an internal node
+            'min_samples_leaf': [1, 2, 4],  # Minimum number of samples required to be at a leaf node
+            'max_features': [None, 'sqrt', 'log2'],  # Number of features to consider when looking for the best split
+            'bootstrap': [True, False],  # Whether bootstrap samples are used when building trees
+        }
+
+        # Initialize the Random Forest regressor
+        rf_model = RandomForestRegressor(random_state=42)
+
+        kf = KFold(n_splits=4, shuffle=True, random_state=0)
+
+        # Initialize RandomizedSearchCV
+        random_search = RandomizedSearchCV(
+            estimator=rf_model,
+            param_distributions=param_grid,
+            n_iter=50,  # Number of random combinations to try
+            scoring='neg_mean_squared_error',  # Use negative MSE as the scoring metric
+            cv=kf,  # 3-fold cross-validation
+            verbose=1,  # Print progress
+            n_jobs=-1,  # Use all available CPU cores
+            random_state=42
+        )
+
+        # Fit the random search to the data
+        random_search.fit(X_train, y_train)
+
+        # Get the best parameters and the best model
+        best_params = random_search.best_params_
+        best_model = random_search.best_estimator_
+
+        print("Best Parameters:", best_params)
+        print("Best RMSE (negative MSE):", np.sqrt(-random_search.best_score_))
+
+        return best_params, best_model
+
+    def model_svr(self):
+        print("Fitting Support Vector Regression (SVR) model...")
+
+        # Scale y_train
+        scaler = MinMaxScaler()
+        self.y_train = pd.Series(scaler.fit_transform(self.y_train.values.reshape(-1, 1)).flatten(), index=self.y_train.index)
+        self.y_test = pd.Series(scaler.transform(self.y_test.values.reshape(-1, 1)).flatten(), index=self.y_test.index)
+
+        # Add lagged features and rolling statistics to both X_train and X_test
+        for lag in range(1, 3):  # Add lagged features (e.g., lag_1, lag_2)
+            self.X_train[f'cpu_lag_{lag}'] = self.y_train.shift(lag)
+            self.X_test[f'cpu_lag_{lag}'] = self.y_test.shift(lag)
+
+        self.X_train['cpu_rolling_mean_3'] = self.y_train.rolling(window=3).mean()
+        self.X_test['cpu_rolling_mean_3'] = self.y_test.rolling(window=3).mean()
+
+        self.X_train['cpu_rolling_std_3'] = self.y_train.rolling(window=3).std()
+        self.X_test['cpu_rolling_std_3'] = self.y_test.rolling(window=3).std()
+
+        # Drop rows with NaN values caused by lagging and rolling operations
+        self.X_train = self.X_train.dropna()
+        self.X_test = self.X_test.dropna()
+
+        # Align y_train and y_test with X_train and X_test after dropping NaN rows
+        self.X_train, self.y_train = self.X_train.align(self.y_train, join='inner', axis=0)
+        self.X_test, self.y_test = self.X_test.align(self.y_test, join='inner', axis=0)
+
+        # Tune and train the model
+        best_params, self.model = self.tune_svr(self.X_train, self.y_train)
+        self.model.fit(self.X_train, self.y_train)
+
+        # Predict
+        y_pred_scaled = self.model.predict(self.X_test)
+
+        # Ensure predictions are reshaped correctly for inverse transformation
+        y_pred_scaled = y_pred_scaled.reshape(-1, 1)
+        y_pred = scaler.inverse_transform(y_pred_scaled).flatten()
+
+        # Create a DataFrame for the test set
+        test = pd.DataFrame(self.X_test.copy())
+        test[self.target] = scaler.inverse_transform(self.y_test.values.reshape(-1, 1)).flatten()  # Inverse transform y_test
+        test['prediction'] = y_pred
+        self.data = self.data.merge(test[['prediction']], how='left', left_index=True, right_index=True)
+        self.data.dropna(inplace=True)  # Drop rows with NaN values
+
+        # Plot the results
+        ax = test[[self.target]].plot(figsize=(15, 5))
+        test['prediction'].plot(ax=ax, style='--')
+        plt.legend(['Truth Data', 'Predictions'])
+        ax.set_title('SVR: Raw Data and Prediction')
+        plt.show()
+
+        # Calculate RMSE
+        score = np.sqrt(mean_squared_error(test[self.target], test['prediction']))
+        print(f'RMSE Score on Test set: {score:0.2f}')
+        print("Mean of y_test:", test[self.target].mean())
+        print("Standard Deviation of y_test:", test[self.target].std())
+        relative_error = (score / test[self.target].mean()) * 100
+        print(f"Relative Error: {relative_error:.2f}%")
+
+    def tune_svr(self, X_train, y_train):
+        """
+        Perform hyperparameter tuning for SVR using RandomizedSearchCV.
+
+        Args:
+            X_train (pd.DataFrame): Training features.
+            y_train (pd.Series): Training target.
+
+        Returns:
+            dict: Best parameters from the search.
+            SVR: Best SVR model.
+        """
+        # Define the parameter grid
+        param_grid = {
+            'C': [0.1, 1, 10, 100],  # Regularization parameter
+            'epsilon': [0.01, 0.1, 0.2, 0.5],  # Epsilon in the epsilon-SVR model
+            'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],  # Kernel type
+            'gamma': ['scale', 'auto'],  # Kernel coefficient
+        }
+
+        kf = KFold(n_splits=4, shuffle=True, random_state=0)
+
+        # Initialize the SVR model
+        svr_model = SVR()
+
+        # Initialize RandomizedSearchCV
+        random_search = RandomizedSearchCV(
+            estimator=svr_model,
+            param_distributions=param_grid,
+            n_iter=50,  # Number of random combinations to try
+            scoring='neg_mean_squared_error',  # Use negative MSE as the scoring metric
+            cv=kf,  # 4-fold cross-validation
+            verbose=1,  # Print progress
+            n_jobs=-1,  # Use all available CPU cores
+            random_state=42
+        )
+
+        # Fit the random search to the data
+        random_search.fit(X_train, y_train)
+
+        # Get the best parameters and the best model
+        best_params = random_search.best_params_
+        best_model = random_search.best_estimator_
+
+        print("Best Parameters:", best_params)
+        print("Best RMSE (negative MSE):", np.sqrt(-random_search.best_score_))
+
+        return best_params, best_model
+    
