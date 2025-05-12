@@ -27,15 +27,16 @@ def main():
     #        dataPost
     #    )   
 
-    # model_arima = ModelBuilding(
-    #       model_type="arima",
-    #       X_train=train_x,  # ARIMA doesn't use features, so pass None
-    #       y_train=train_y,
-    #       X_test=test_x,   # ARIMA doesn't use features, so pass None
-    #       y_test=test_y,
-    #       features=None,
-    #       target="cpu"
-    #   )
+    model_arima = ModelBuilding(
+          model_type="arima",
+          X_train=train_x,  # ARIMA doesn't use features, so pass None
+          y_train=train_y,
+          X_test=test_x,   # ARIMA doesn't use features, so pass None
+          y_test=test_y,
+          features=None,
+          target="cpu",
+          data=dataPost
+      )
     # model_xgboost = ModelBuilding(
     #        "randomforest",
     #        train_x,
@@ -46,16 +47,16 @@ def main():
     #        'cpu',
     #        dataPost
     #    )   
-    model_xgboost = ModelBuilding(
-           "svr",
-           train_x,
-           train_y,
-           test_x,
-           test_y,
-           data.features,
-           'cpu',
-           dataPost
-      )   
+    # model_xgboost = ModelBuilding(
+    #        "svr",
+    #        train_x,
+    #        train_y,
+    #        test_x,
+    #        test_y,
+    #        data.features,
+    #        'cpu',
+    #        dataPost
+    #   )   
     # model_lstm = ModelBuilding(
     #     "lstm",
     #     train_x,

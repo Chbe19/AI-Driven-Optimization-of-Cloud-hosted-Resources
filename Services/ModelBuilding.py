@@ -38,79 +38,71 @@ class ModelBuilding:
         if model_type.lower() == "xgboost":
             self.model_xgboost()
  
-        # elif model_type.lower() == "arima":
-        #     # ARIMA implementation
-        #     print("Fitting ARIMA model...")
+        elif model_type.lower() == "arima":
+            # ARIMA implementation
+            print("Fitting ARIMA model...")
             
-        #     # Check for duplicate indices
-        #     self.y_train = self.y_train.sort_index()
-        #     self.y_test = self.y_test.sort_index()
-        #     self.y_train = self.y_train.groupby(self.y_train.index).mean()
-        #     self.y_test = self.y_test.groupby(self.y_test.index).mean()
-        #     # Assign the hourly frequency
-        #     self.y_train = self.y_train.asfreq('30T').ffill()  # Forward-fill missing values
-        #     self.y_test = self.y_test.asfreq('30T').ffill()  # Forward-fill missing values
+            # Check for duplicate indices
+            self.y_train = self.y_train.sort_index()
+            self.y_test = self.y_test.sort_index()
+            self.y_train = self.y_train.groupby(self.y_train.index).mean()
+            self.y_test = self.y_test.groupby(self.y_test.index).mean()
+            # Assign the hourly frequency
+            self.y_train = self.y_train.asfreq('30T').ffill()  # Forward-fill missing values
+            self.y_test = self.y_test.asfreq('30T').ffill()  # Forward-fill missing values
             
-        #     scaler = MinMaxScaler()
-        #     self.y_train = pd.Series(scaler.fit_transform(self.y_train.values.reshape(-1, 1)).flatten(), index=self.y_train.index)
-        #     self.y_test = pd.Series(scaler.transform(self.y_test.values.reshape(-1, 1)).flatten(), index=self.y_test.index)
+            scaler = MinMaxScaler()
+            self.y_train = pd.Series(scaler.fit_transform(self.y_train.values.reshape(-1, 1)).flatten(), index=self.y_train.index)
+            self.y_test = pd.Series(scaler.transform(self.y_test.values.reshape(-1, 1)).flatten(), index=self.y_test.index)
             
-        #     self.y_test = self.y_test.dropna()
-        #     self.y_train = self.y_train.dropna()  # Drop NaN values         
+            self.y_test = self.y_test.dropna()
+            self.y_train = self.y_train.dropna()  # Drop NaN values         
 
-        #     # Ensure indices are aligned between y_train and X_train
-        #     self.X_train, self.y_train = self.X_train.align(self.y_train, join='inner', axis=0)
+            # Ensure indices are aligned between y_train and X_train
+            self.X_train, self.y_train = self.X_train.align(self.y_train, join='inner', axis=0)
 
-        #     # Ensure indices are aligned between y_test and X_test (if needed later)
-        #     self.X_test, self.y_test = self.X_test.align(self.y_test, join='inner', axis=0)
+            # Ensure indices are aligned between y_test and X_test (if needed later)
+            self.X_test, self.y_test = self.X_test.align(self.y_test, join='inner', axis=0)
 
-        #     # Check for stationarity
-        #     # plot_acf(self.y_train, lags=50)
-        #     # plt.title("ACF Plot") # P-values
-        #     # plt.show()
-        #     # plot_pacf(self.y_train, lags=50, method='ywm')
-        #     # plt.title("PACF Plot") # Q-values
-        #     # plt.show()
-        #     # plot_acf(self.y_train, lags=240)  # Check for seasonal lags (e.g., multiples of 24)
-        #     # plt.title("Seasonal ACF Plot")
-        #     # plt.show()
-        #     # plot_pacf(self.y_train, lags=240, method='ywm')
-        #     # plt.title("Seasonal PACF Plot")
-        #     # plt.show()
-        #     #------------------------------------------------------
-        #     start_time = time.time()
-        #     self.model = auto_arima(
-        #         self.y_train,
-        #         seasonal=True,
-        #         m=48,  # Seasonal period (e.g., 48 for half-hourly data with daily seasonality)
-        #         trace=True,  # Print the model selection process
-        #         error_action='ignore',  # Ignore errors and continue
-        #         suppress_warnings=True,  # Suppress warnings
-        #         stepwise=True,  # Use stepwise search to reduce computation time
-        #     )
-        #     end_time = time.time()
-        #     print(f"Model fitting took {end_time - start_time:.2f} seconds.")
+            # Check for stationarity
+            # plot_acf(self.y_train, lags=50)
+            # plt.title("ACF Plot") # P-values
+            # plt.show()
+            # plot_pacf(self.y_train, lags=50, method='ywm')
+            # plt.title("PACF Plot") # Q-values
+            # plt.show()
+            # plot_acf(self.y_train, lags=240)  # Check for seasonal lags (e.g., multiples of 24)
+            # plt.title("Seasonal ACF Plot")
+            # plt.show()
+            # plot_pacf(self.y_train, lags=240, method='ywm')
+            # plt.title("Seasonal PACF Plot")
+            # plt.show()
+            #------------------------------------------------------
+            start_time = time.time()
+            self.model = SARIMAX(self.y_train, order=(2, 0, 7), seasonal_order=(1, 0, 2, 48),enforce_stationarity=False, enforce_invertibility=False)  # Example order (p=5, d=0, q=2) season (P,D=1,Q,s)
+            self.model = self.model.fit()
+            end_time = time.time()
+            print(f"Model fitting took {end_time - start_time:.2f} seconds.")
 
 
-        #     # Print ARIMA summary
-        #     print(self.model.summary())
+            # Print ARIMA summary
+            print(self.model.summary())
 
-        #     # Forecast on the test set
-        #     #.predict() ?
-        #     forecast = self.model.predict(n_periods=len(self.y_test))
+            # Forecast on the test set
+            #.predict() ?
+            forecast = self.model.forecast(steps=len(self.y_test))
+            forecast = scaler.inverse_transform(forecast.values.reshape(-1, 1)).flatten()
+            y_test_original = scaler.inverse_transform(self.y_test.values.reshape(-1, 1)).flatten()
 
-        #     forecast = scaler.inverse_transform(forecast.values.reshape(-1, 1)).flatten()
-        #     y_test_original = scaler.inverse_transform(self.y_test.values.reshape(-1, 1)).flatten()
-
-        #     #print(self.y_test.index.equals(forecast.index))
-        #     plt.figure(figsize=(10, 6))
-        #     plt.plot(self.y_test.index, y_test_original, label="Actual")
-        #     plt.plot(self.y_test.index, forecast, label="Forecast", linestyle="--")
-        #     plt.title("ARIMA Forecast vs Actual")
-        #     plt.legend()
-        #     plt.show()
-        #     rmse = np.sqrt(mean_squared_error(self.y_test, forecast))
-        #     print(f"RMSE: {rmse}")
+            #print(self.y_test.index.equals(forecast.index))
+            plt.figure(figsize=(10, 6))
+            plt.plot(self.y_test.index, y_test_original, label="Actual")
+            plt.plot(self.y_test.index, forecast, label="Forecast", linestyle="--")
+            plt.title("ARIMA Forecast vs Actual")
+            plt.legend()
+            plt.show()
+            rmse = np.sqrt(mean_squared_error(self.y_test, forecast))
+            print(f"RMSE: {rmse}")
         
         elif model_type.lower() == "randomforest":
             self.model_randomforest()
