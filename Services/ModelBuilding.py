@@ -1,4 +1,4 @@
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 import xgboost as xgb
 from statsmodels.tsa.arima.model import ARIMA
 import pandas as pd
@@ -296,7 +296,9 @@ class ModelBuilding:
             plt.legend()
             plt.title('CNN-LSTM Prediction vs Actual')
             plt.show()
-
+            # Calculate MAE
+            mae = mean_absolute_error(test[self.target], test['prediction'])
+            print(f'MAE Score on Test set: {mae:0.2f}')
             rmse = np.sqrt(mean_squared_error(self.y_test.iloc[TIME_STEPS:], y_pred.flatten()))
             print(f"RMSE: {rmse}")
             end_time = time.time()
@@ -368,13 +370,16 @@ class ModelBuilding:
         ax.set_title('XGBOOST: Raw Data and Prediction')
         plt.show()
 
+        # Calculate MAE
+        mae = mean_absolute_error(test[self.target], test['prediction'])
+        print(f'MAE Score on Test set: {mae:0.2f}')
         # Calculate RMSE
         score = np.sqrt(mean_squared_error(test[self.target], test['prediction']))
         print(f'RMSE Score on Test set: {score:0.2f}')
         print("Mean of y_test:", test[self.target].mean())  # Use inverse-transformed y_test
         print("Standard Deviation of y_test:", test[self.target].std())  # Use inverse-transformed y_test
         relative_error = (score / test[self.target].mean()) * 100
-        print(f"Relative Error: {relative_error:.2f}%")        
+        print(f"Relative Error(RMSE): {relative_error:.2f}%")        
 
     def tune_xgboost(self, X_train, y_train):
         """
@@ -492,13 +497,16 @@ class ModelBuilding:
         ax.set_title('Random Forest: Raw Data and Prediction')
         plt.show()
 
+        # Calculate MAE
+        mae = mean_absolute_error(test[self.target], test['prediction'])
+        print(f'MAE Score on Test set: {mae:0.2f}')
         # Calculate RMSE
         score = np.sqrt(mean_squared_error(test[self.target], test['prediction']))
         print(f'RMSE Score on Test set: {score:0.2f}')
         print("Mean of y_test:", test[self.target].mean())
         print("Standard Deviation of y_test:", test[self.target].std())
         relative_error = (score / test[self.target].mean()) * 100
-        print(f"Relative Error: {relative_error:.2f}%")
+        print(f"Relative Error (RMSE): {relative_error:.2f}%")
 
     def tune_randomforest(self, X_train, y_train):
         """
@@ -603,13 +611,16 @@ class ModelBuilding:
         ax.set_title('SVR: Raw Data and Prediction')
         plt.show()
 
+        # Calculate MAE
+        mae = mean_absolute_error(test[self.target], test['prediction'])
+        print(f'MAE Score on Test set: {mae:0.2f}')
         # Calculate RMSE
-        score = np.sqrt(mean_squared_error(test[self.target], test['prediction']))
-        print(f'RMSE Score on Test set: {score:0.2f}')
+        rmse = np.sqrt(mean_squared_error(test[self.target], test['prediction']))
+        print(f'RMSE Score on Test set: {rmse:0.2f}')
         print("Mean of y_test:", test[self.target].mean())
         print("Standard Deviation of y_test:", test[self.target].std())
-        relative_error = (score / test[self.target].mean()) * 100
-        print(f"Relative Error: {relative_error:.2f}%")
+        relative_error = (rmse / test[self.target].mean()) * 100
+        print(f"Relative Error (RMSE): {relative_error:.2f}%")
 
     def tune_svr(self, X_train, y_train):
         """
