@@ -10,7 +10,7 @@ def main():
     df = pd.read_csv('data/cpu_usage_full_period.csv', index_col=0, parse_dates=True)
 
     data = DataPreprocessor(df, 0.2)
-    features = ['month','day','hour', 'minute']
+    features = []
     data.set_features(features)
     train_x, train_y = data.get_training_set('cpu')
     test_x, test_y = data.get_testing_set('cpu')
@@ -55,7 +55,7 @@ def main():
            data.features,
            'cpu',
            dataPost
-       )   
+      )   
     # model_lstm = ModelBuilding(
     #     "lstm",
     #     train_x,

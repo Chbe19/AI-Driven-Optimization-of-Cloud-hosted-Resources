@@ -12,11 +12,11 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV, KFold
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.svm import SVR
-from pmdarima import auto_arima 
+# from pmdarima import auto_arima 
 
-# import tensorflow as tf
-# from tensorflow.keras.models import Sequential
-# from tensorflow.keras.layers import LSTM, Dense, Conv1D, MaxPooling1D, Flatten, Dropout
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Conv1D, MaxPooling1D, Flatten, Dropout
 
 
 class ModelBuilding:
@@ -38,277 +38,277 @@ class ModelBuilding:
         if model_type.lower() == "xgboost":
             self.model_xgboost()
  
-        elif model_type.lower() == "arima":
-            # ARIMA implementation
-            print("Fitting ARIMA model...")
+        # elif model_type.lower() == "arima":
+        #     # ARIMA implementation
+        #     print("Fitting ARIMA model...")
             
-            # Check for duplicate indices
-            self.y_train = self.y_train.sort_index()
-            self.y_test = self.y_test.sort_index()
-            self.y_train = self.y_train.groupby(self.y_train.index).mean()
-            self.y_test = self.y_test.groupby(self.y_test.index).mean()
-            # Assign the hourly frequency
-            self.y_train = self.y_train.asfreq('30T').ffill()  # Forward-fill missing values
-            self.y_test = self.y_test.asfreq('30T').ffill()  # Forward-fill missing values
+        #     # Check for duplicate indices
+        #     self.y_train = self.y_train.sort_index()
+        #     self.y_test = self.y_test.sort_index()
+        #     self.y_train = self.y_train.groupby(self.y_train.index).mean()
+        #     self.y_test = self.y_test.groupby(self.y_test.index).mean()
+        #     # Assign the hourly frequency
+        #     self.y_train = self.y_train.asfreq('30T').ffill()  # Forward-fill missing values
+        #     self.y_test = self.y_test.asfreq('30T').ffill()  # Forward-fill missing values
             
-            scaler = MinMaxScaler()
-            self.y_train = pd.Series(scaler.fit_transform(self.y_train.values.reshape(-1, 1)).flatten(), index=self.y_train.index)
-            self.y_test = pd.Series(scaler.transform(self.y_test.values.reshape(-1, 1)).flatten(), index=self.y_test.index)
+        #     scaler = MinMaxScaler()
+        #     self.y_train = pd.Series(scaler.fit_transform(self.y_train.values.reshape(-1, 1)).flatten(), index=self.y_train.index)
+        #     self.y_test = pd.Series(scaler.transform(self.y_test.values.reshape(-1, 1)).flatten(), index=self.y_test.index)
             
-            self.y_test = self.y_test.dropna()
-            self.y_train = self.y_train.dropna()  # Drop NaN values         
+        #     self.y_test = self.y_test.dropna()
+        #     self.y_train = self.y_train.dropna()  # Drop NaN values         
 
-            # Ensure indices are aligned between y_train and X_train
-            self.X_train, self.y_train = self.X_train.align(self.y_train, join='inner', axis=0)
+        #     # Ensure indices are aligned between y_train and X_train
+        #     self.X_train, self.y_train = self.X_train.align(self.y_train, join='inner', axis=0)
 
-            # Ensure indices are aligned between y_test and X_test (if needed later)
-            self.X_test, self.y_test = self.X_test.align(self.y_test, join='inner', axis=0)
+        #     # Ensure indices are aligned between y_test and X_test (if needed later)
+        #     self.X_test, self.y_test = self.X_test.align(self.y_test, join='inner', axis=0)
 
-            # Check for stationarity
-            # plot_acf(self.y_train, lags=50)
-            # plt.title("ACF Plot") # P-values
-            # plt.show()
-            # plot_pacf(self.y_train, lags=50, method='ywm')
-            # plt.title("PACF Plot") # Q-values
-            # plt.show()
-            # plot_acf(self.y_train, lags=240)  # Check for seasonal lags (e.g., multiples of 24)
-            # plt.title("Seasonal ACF Plot")
-            # plt.show()
-            # plot_pacf(self.y_train, lags=240, method='ywm')
-            # plt.title("Seasonal PACF Plot")
-            # plt.show()
-            #------------------------------------------------------
-            start_time = time.time()
-            self.model = auto_arima(
-                self.y_train,
-                seasonal=True,
-                m=48,  # Seasonal period (e.g., 48 for half-hourly data with daily seasonality)
-                trace=True,  # Print the model selection process
-                error_action='ignore',  # Ignore errors and continue
-                suppress_warnings=True,  # Suppress warnings
-                stepwise=True,  # Use stepwise search to reduce computation time
-            )
-            end_time = time.time()
-            print(f"Model fitting took {end_time - start_time:.2f} seconds.")
+        #     # Check for stationarity
+        #     # plot_acf(self.y_train, lags=50)
+        #     # plt.title("ACF Plot") # P-values
+        #     # plt.show()
+        #     # plot_pacf(self.y_train, lags=50, method='ywm')
+        #     # plt.title("PACF Plot") # Q-values
+        #     # plt.show()
+        #     # plot_acf(self.y_train, lags=240)  # Check for seasonal lags (e.g., multiples of 24)
+        #     # plt.title("Seasonal ACF Plot")
+        #     # plt.show()
+        #     # plot_pacf(self.y_train, lags=240, method='ywm')
+        #     # plt.title("Seasonal PACF Plot")
+        #     # plt.show()
+        #     #------------------------------------------------------
+        #     start_time = time.time()
+        #     self.model = auto_arima(
+        #         self.y_train,
+        #         seasonal=True,
+        #         m=48,  # Seasonal period (e.g., 48 for half-hourly data with daily seasonality)
+        #         trace=True,  # Print the model selection process
+        #         error_action='ignore',  # Ignore errors and continue
+        #         suppress_warnings=True,  # Suppress warnings
+        #         stepwise=True,  # Use stepwise search to reduce computation time
+        #     )
+        #     end_time = time.time()
+        #     print(f"Model fitting took {end_time - start_time:.2f} seconds.")
 
 
-            # Print ARIMA summary
-            print(self.model.summary())
+        #     # Print ARIMA summary
+        #     print(self.model.summary())
 
-            # Forecast on the test set
-            #.predict() ?
-            forecast = self.model.predict(n_periods=len(self.y_test))
+        #     # Forecast on the test set
+        #     #.predict() ?
+        #     forecast = self.model.predict(n_periods=len(self.y_test))
 
-            forecast = scaler.inverse_transform(forecast.values.reshape(-1, 1)).flatten()
-            y_test_original = scaler.inverse_transform(self.y_test.values.reshape(-1, 1)).flatten()
+        #     forecast = scaler.inverse_transform(forecast.values.reshape(-1, 1)).flatten()
+        #     y_test_original = scaler.inverse_transform(self.y_test.values.reshape(-1, 1)).flatten()
 
-            #print(self.y_test.index.equals(forecast.index))
-            plt.figure(figsize=(10, 6))
-            plt.plot(self.y_test.index, y_test_original, label="Actual")
-            plt.plot(self.y_test.index, forecast, label="Forecast", linestyle="--")
-            plt.title("ARIMA Forecast vs Actual")
-            plt.legend()
-            plt.show()
-            rmse = np.sqrt(mean_squared_error(self.y_test, forecast))
-            print(f"RMSE: {rmse}")
+        #     #print(self.y_test.index.equals(forecast.index))
+        #     plt.figure(figsize=(10, 6))
+        #     plt.plot(self.y_test.index, y_test_original, label="Actual")
+        #     plt.plot(self.y_test.index, forecast, label="Forecast", linestyle="--")
+        #     plt.title("ARIMA Forecast vs Actual")
+        #     plt.legend()
+        #     plt.show()
+        #     rmse = np.sqrt(mean_squared_error(self.y_test, forecast))
+        #     print(f"RMSE: {rmse}")
         
         elif model_type.lower() == "randomforest":
             self.model_randomforest()
         elif model_type.lower() == "svr":
             self.model_svr()
 
-        # elif model_type.lower() == "lstm":
-        #     print("Fitting LSTM model...")
-        #     start_time = time.time()
+        elif model_type.lower() == "lstm":
+            print("Fitting LSTM model...")
+            start_time = time.time()
 
-        #     # Scale target
-        #     scaler = MinMaxScaler()
-        #     y_train_scaled = scaler.fit_transform(self.y_train.values.reshape(-1, 1))
-        #     y_test_scaled = scaler.transform(self.y_test.values.reshape(-1, 1))
+            # Scale target
+            scaler = MinMaxScaler()
+            y_train_scaled = scaler.fit_transform(self.y_train.values.reshape(-1, 1))
+            y_test_scaled = scaler.transform(self.y_test.values.reshape(-1, 1))
 
-        #     # LSTM behöver sekvenser (X timsteg bakåt för att förutsäga nästa steg)
-        #     def create_sequences(X, y, time_steps=24):
-        #         Xs, ys = [], []
-        #         for i in range(len(X) - time_steps):
-        #             v = X.iloc[i:(i + time_steps)].values
-        #             Xs.append(v)
-        #             ys.append(y[i + time_steps])
-        #         return np.array(Xs), np.array(ys)
+            # LSTM behöver sekvenser (X timsteg bakåt för att förutsäga nästa steg)
+            def create_sequences(X, y, time_steps=24):
+                Xs, ys = [], []
+                for i in range(len(X) - time_steps):
+                    v = X.iloc[i:(i + time_steps)].values
+                    Xs.append(v)
+                    ys.append(y[i + time_steps])
+                return np.array(Xs), np.array(ys)
 
-        #     TIME_STEPS = 24  # T.ex., använd 24 timmar bakåt för att förutsäga nästa
+            TIME_STEPS = 24  # T.ex., använd 24 timmar bakåt för att förutsäga nästa
 
-        #     X_train_seq, y_train_seq = create_sequences(self.X_train, y_train_scaled, TIME_STEPS)
-        #     X_test_seq, y_test_seq = create_sequences(self.X_test, y_test_scaled, TIME_STEPS)
+            X_train_seq, y_train_seq = create_sequences(self.X_train, y_train_scaled, TIME_STEPS)
+            X_test_seq, y_test_seq = create_sequences(self.X_test, y_test_scaled, TIME_STEPS)
 
-        #     # Skapa LSTM-modellen
-        #     model = Sequential()
-        #     model.add(tf.keras.Input(shape=(X_train_seq.shape[1], X_train_seq.shape[2]))) 
-        #     model.add(LSTM(64, activation='relu', return_sequences=True))  # Lägg till en LSTM som lämnar sekvenser
-        #     model.add(LSTM(32, activation='relu'))
-        #     model.add(Dense(1))
-        #     model.compile(optimizer='adam', loss='mse')
+            # Skapa LSTM-modellen
+            model = Sequential()
+            model.add(tf.keras.Input(shape=(X_train_seq.shape[1], X_train_seq.shape[2]))) 
+            model.add(LSTM(64, activation='relu', return_sequences=True))  # Lägg till en LSTM som lämnar sekvenser
+            model.add(LSTM(32, activation='relu'))
+            model.add(Dense(1))
+            model.compile(optimizer='adam', loss='mse')
 
-        #     # Träna modellen
-        #     history = model.fit(
-        #         X_train_seq, 
-        #         y_train_seq, 
-        #         epochs=20, 
-        #         batch_size=64, 
-        #         validation_split=0.1, 
-        #         verbose=1
-        #         )
+            # Träna modellen
+            history = model.fit(
+                X_train_seq, 
+                y_train_seq, 
+                epochs=20, 
+                batch_size=64, 
+                validation_split=0.1, 
+                verbose=1
+                )
 
-        #     self.model = model  # Spara modellen
+            self.model = model  # Spara modellen
 
-        #     # Prediktera
-        #     y_pred_scaled = model.predict(X_test_seq)
-        #     y_pred = scaler.inverse_transform(y_pred_scaled)
+            # Prediktera
+            y_pred_scaled = model.predict(X_test_seq)
+            y_pred = scaler.inverse_transform(y_pred_scaled)
 
-        #     # Justera test-indexet för att matcha sekvensen
-        #     test_index = self.y_test.index[TIME_STEPS:]
+            # Justera test-indexet för att matcha sekvensen
+            test_index = self.y_test.index[TIME_STEPS:]
 
-        #     plt.figure(figsize=(15, 5))
-        #     plt.plot(test_index, self.y_test.iloc[TIME_STEPS:], label='Actual')
-        #     plt.plot(test_index, y_pred.flatten(), label='Predicted')
-        #     plt.legend()
-        #     plt.title('LSTM Prediction vs Actual')
-        #     plt.show()
+            plt.figure(figsize=(15, 5))
+            plt.plot(test_index, self.y_test.iloc[TIME_STEPS:], label='Actual')
+            plt.plot(test_index, y_pred.flatten(), label='Predicted')
+            plt.legend()
+            plt.title('LSTM Prediction vs Actual')
+            plt.show()
 
-        #     rmse = np.sqrt(mean_squared_error(self.y_test.iloc[TIME_STEPS:], y_pred.flatten()))
-        #     print(f"RMSE: {rmse}")
-        #     end_time = time.time()
-        #     print(f"Process LSTM took {end_time - start_time:.2f} seconds.")
+            rmse = np.sqrt(mean_squared_error(self.y_test.iloc[TIME_STEPS:], y_pred.flatten()))
+            print(f"RMSE: {rmse}")
+            end_time = time.time()
+            print(f"Process LSTM took {end_time - start_time:.2f} seconds.")
     
-        # elif model_type.lower() == "cnn":
-        #     print("Fitting CNN model...")
-        #     start_time = time.time()
-        #     TIME_STEPS = 24
-        #     output_steps = 1
+        elif model_type.lower() == "cnn":
+            print("Fitting CNN model...")
+            start_time = time.time()
+            TIME_STEPS = 24
+            output_steps = 1
 
-        #     #Förberedelser
-        #     # Scale target
-        #     scaler = MinMaxScaler()
-        #     y_train_scaled = scaler.fit_transform(self.y_train.values.reshape(-1, 1))
-        #     y_test_scaled = scaler.transform(self.y_test.values.reshape(-1, 1))
+            #Förberedelser
+            # Scale target
+            scaler = MinMaxScaler()
+            y_train_scaled = scaler.fit_transform(self.y_train.values.reshape(-1, 1))
+            y_test_scaled = scaler.transform(self.y_test.values.reshape(-1, 1))
 
-        #     def create_sequences(X, y, time_steps=24):
-        #         Xs, ys = [], []
-        #         for i in range(len(X) - time_steps):
-        #             v = X.iloc[i:(i + time_steps)].values
-        #             Xs.append(v)
-        #             ys.append(y[i + time_steps])
-        #         return np.array(Xs), np.array(ys)
+            def create_sequences(X, y, time_steps=24):
+                Xs, ys = [], []
+                for i in range(len(X) - time_steps):
+                    v = X.iloc[i:(i + time_steps)].values
+                    Xs.append(v)
+                    ys.append(y[i + time_steps])
+                return np.array(Xs), np.array(ys)
             
-        #     X_train_seq, y_train_seq = create_sequences(self.X_train, y_train_scaled, TIME_STEPS)
-        #     X_test_seq, y_test_seq = create_sequences(self.X_test, y_test_scaled, TIME_STEPS)
+            X_train_seq, y_train_seq = create_sequences(self.X_train, y_train_scaled, TIME_STEPS)
+            X_test_seq, y_test_seq = create_sequences(self.X_test, y_test_scaled, TIME_STEPS)
 
-        #     input_timesteps = X_train_seq.shape[1]  # 24
-        #     features = X_train_seq.shape[2]   
+            input_timesteps = X_train_seq.shape[1]  # 24
+            features = X_train_seq.shape[2]   
 
-        #     # Bygger modellen
-        #     model = Sequential([
-        #         Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=(input_timesteps, features)),
-        #         MaxPooling1D(pool_size=2),
-        #         Conv1D(filters=128, kernel_size=3, activation='relu'),
-        #         Flatten(),
-        #         Dense(64, activation='relu'),
-        #         Dense(output_steps)  # No activation -> regression output
-        #     ])
+            # Bygger modellen
+            model = Sequential([
+                Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=(input_timesteps, features)),
+                MaxPooling1D(pool_size=2),
+                Conv1D(filters=128, kernel_size=3, activation='relu'),
+                Flatten(),
+                Dense(64, activation='relu'),
+                Dense(output_steps)  # No activation -> regression output
+            ])
             
-        #     model.compile(optimizer='adam',
-        #       loss='mse',      # Mean Squared Error is typical for forecasting
-        #       metrics=['mae']) # Mean Absolute Error also useful to track
+            model.compile(optimizer='adam',
+              loss='mse',      # Mean Squared Error is typical for forecasting
+              metrics=['mae']) # Mean Absolute Error also useful to track
 
-        #     model.summary()
+            model.summary()
 
-        #     # Träna
-        #     model.fit(X_train_seq, y_train_seq, epochs=10, batch_size=32, validation_split=0.2, verbose=1)
+            # Träna
+            model.fit(X_train_seq, y_train_seq, epochs=10, batch_size=32, validation_split=0.2, verbose=1)
 
-        #     self.model = model
+            self.model = model
 
-        #     # Prediktera
-        #     y_pred_scaled = model.predict(X_test_seq)
-        #     y_pred = scaler.inverse_transform(y_pred_scaled)
+            # Prediktera
+            y_pred_scaled = model.predict(X_test_seq)
+            y_pred = scaler.inverse_transform(y_pred_scaled)
 
-        #     test_index = self.y_test.index[TIME_STEPS:]
+            test_index = self.y_test.index[TIME_STEPS:]
 
-        #     plt.figure(figsize=(15, 5))
-        #     plt.plot(test_index, self.y_test.iloc[TIME_STEPS:], label='Actual')
-        #     plt.plot(test_index, y_pred.flatten(), label='Predicted')
-        #     plt.legend()
-        #     plt.title('CNN Prediction vs Actual')
-        #     plt.show()
+            plt.figure(figsize=(15, 5))
+            plt.plot(test_index, self.y_test.iloc[TIME_STEPS:], label='Actual')
+            plt.plot(test_index, y_pred.flatten(), label='Predicted')
+            plt.legend()
+            plt.title('CNN Prediction vs Actual')
+            plt.show()
 
-        #     rmse = np.sqrt(mean_squared_error(self.y_test.iloc[TIME_STEPS:], y_pred.flatten()))
-        #     print(f"RMSE: {rmse}")
-        #     end_time = time.time()
-        #     print(f"Process CNN took {end_time - start_time:.2f} seconds.")
+            rmse = np.sqrt(mean_squared_error(self.y_test.iloc[TIME_STEPS:], y_pred.flatten()))
+            print(f"RMSE: {rmse}")
+            end_time = time.time()
+            print(f"Process CNN took {end_time - start_time:.2f} seconds.")
 
-        # elif model_type.lower() == "cnn-lstm":
-        #     print("Fitting CNN-LSTM model...")
-        #     start_time = time.time()
-        #     TIME_STEPS = 24
-        #     output_steps = 1
+        elif model_type.lower() == "cnn-lstm":
+            print("Fitting CNN-LSTM model...")
+            start_time = time.time()
+            TIME_STEPS = 24
+            output_steps = 1
 
-        #     #Förberedelser
-        #     # Scale target
-        #     scaler = MinMaxScaler()
-        #     y_train_scaled = scaler.fit_transform(self.y_train.values.reshape(-1, 1))
-        #     y_test_scaled = scaler.transform(self.y_test.values.reshape(-1, 1))
+            #Förberedelser
+            # Scale target
+            scaler = MinMaxScaler()
+            y_train_scaled = scaler.fit_transform(self.y_train.values.reshape(-1, 1))
+            y_test_scaled = scaler.transform(self.y_test.values.reshape(-1, 1))
 
-        #     def create_sequences(X, y, time_steps=24):
-        #         Xs, ys = [], []
-        #         for i in range(len(X) - time_steps):
-        #             v = X.iloc[i:(i + time_steps)].values
-        #             Xs.append(v)
-        #             ys.append(y[i + time_steps])
-        #         return np.array(Xs), np.array(ys)
+            def create_sequences(X, y, time_steps=24):
+                Xs, ys = [], []
+                for i in range(len(X) - time_steps):
+                    v = X.iloc[i:(i + time_steps)].values
+                    Xs.append(v)
+                    ys.append(y[i + time_steps])
+                return np.array(Xs), np.array(ys)
             
-        #     X_train_seq, y_train_seq = create_sequences(self.X_train, y_train_scaled, TIME_STEPS)
-        #     X_test_seq, y_test_seq = create_sequences(self.X_test, y_test_scaled, TIME_STEPS)
+            X_train_seq, y_train_seq = create_sequences(self.X_train, y_train_scaled, TIME_STEPS)
+            X_test_seq, y_test_seq = create_sequences(self.X_test, y_test_scaled, TIME_STEPS)
 
-        #     input_timesteps = X_train_seq.shape[1]  # 24
-        #     features = X_train_seq.shape[2]   
+            input_timesteps = X_train_seq.shape[1]  # 24
+            features = X_train_seq.shape[2]   
 
-        #     # Bygger modellen
-        #     model = Sequential([
-        #         tf.keras.layers.Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=(input_timesteps, features)),
-        #         tf.keras.layers.MaxPooling1D(pool_size=2),
-        #         tf.keras.layers.Dropout(0.3),
-        #         tf.keras.layers.LSTM(50, activation='relu', return_sequences=False),
-        #         tf.keras.layers.Dropout(0.3),
-        #         tf.keras.layers.Dense(32, activation='relu'),
-        #         tf.keras.layers.Dense(output_steps)
-        #     ])
+            # Bygger modellen
+            model = Sequential([
+                tf.keras.layers.Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=(input_timesteps, features)),
+                tf.keras.layers.MaxPooling1D(pool_size=2),
+                tf.keras.layers.Dropout(0.3),
+                tf.keras.layers.LSTM(50, activation='relu', return_sequences=False),
+                tf.keras.layers.Dropout(0.3),
+                tf.keras.layers.Dense(32, activation='relu'),
+                tf.keras.layers.Dense(output_steps)
+            ])
             
-        #     model.compile(optimizer='adam',
-        #       loss='mse',      # Mean Squared Error is typical for forecasting
-        #       metrics=['mae']) # Mean Absolute Error also useful to track
+            model.compile(optimizer='adam',
+              loss='mse',      # Mean Squared Error is typical for forecasting
+              metrics=['mae']) # Mean Absolute Error also useful to track
 
-        #     model.summary()
+            model.summary()
 
-        #     # Träna
-        #     model.fit(X_train_seq, y_train_seq, epochs=10, batch_size=32, validation_split=0.2, verbose=1)
+            # Träna
+            model.fit(X_train_seq, y_train_seq, epochs=10, batch_size=32, validation_split=0.2, verbose=1)
 
-        #     self.model = model
+            self.model = model
 
-        #     # Prediktera
-        #     y_pred_scaled = model.predict(X_test_seq)
-        #     y_pred = scaler.inverse_transform(y_pred_scaled)
+            # Prediktera
+            y_pred_scaled = model.predict(X_test_seq)
+            y_pred = scaler.inverse_transform(y_pred_scaled)
 
-        #     test_index = self.y_test.index[TIME_STEPS:]
+            test_index = self.y_test.index[TIME_STEPS:]
 
-        #     plt.figure(figsize=(15, 5))
-        #     plt.plot(test_index, self.y_test.iloc[TIME_STEPS:], label='Actual')
-        #     plt.plot(test_index, y_pred.flatten(), label='Predicted')
-        #     plt.legend()
-        #     plt.title('CNN-LSTM Prediction vs Actual')
-        #     plt.show()
+            plt.figure(figsize=(15, 5))
+            plt.plot(test_index, self.y_test.iloc[TIME_STEPS:], label='Actual')
+            plt.plot(test_index, y_pred.flatten(), label='Predicted')
+            plt.legend()
+            plt.title('CNN-LSTM Prediction vs Actual')
+            plt.show()
 
-        #     rmse = np.sqrt(mean_squared_error(self.y_test.iloc[TIME_STEPS:], y_pred.flatten()))
-        #     print(f"RMSE: {rmse}")
-        #     end_time = time.time()
-        #     print(f"Process CNN-LSTM took {end_time - start_time:.2f} seconds.")
+            rmse = np.sqrt(mean_squared_error(self.y_test.iloc[TIME_STEPS:], y_pred.flatten()))
+            print(f"RMSE: {rmse}")
+            end_time = time.time()
+            print(f"Process CNN-LSTM took {end_time - start_time:.2f} seconds.")
 
         else:
             raise ValueError(f"Unsupported model type: {model_type}")
@@ -633,9 +633,9 @@ class ModelBuilding:
         """
         # Define the parameter grid
         param_grid = {
-            'C': [0.1, 1, 10, 100],  # Regularization parameter
-            'epsilon': [0.01, 0.1, 0.2, 0.5],  # Epsilon in the epsilon-SVR model
-            'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],  # Kernel type
+            'C': [0.1, 1, 10],  # Regularization parameter
+            'epsilon': [0.01, 0.1, 0.2],  # Epsilon in the epsilon-SVR model
+            'kernel': ['linear', 'poly', 'sigmoid'],  # Kernel type ['linear', 'poly', 'rbf', 'sigmoid']
             'gamma': ['scale', 'auto'],  # Kernel coefficient
         }
 
