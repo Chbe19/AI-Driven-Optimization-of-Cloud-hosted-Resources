@@ -101,6 +101,9 @@ class ModelBuilding:
             plt.title("ARIMA Forecast vs Actual")
             plt.legend()
             plt.show()
+            # Calculate MAE
+            mae = mean_absolute_error(self.y_test, forecast)
+            print(f'MAE Score on Test set: {mae:0.2f}')
             rmse = np.sqrt(mean_squared_error(self.y_test, forecast))
             print(f"RMSE: {rmse}")
         
@@ -296,9 +299,7 @@ class ModelBuilding:
             plt.legend()
             plt.title('CNN-LSTM Prediction vs Actual')
             plt.show()
-            # Calculate MAE
-            mae = mean_absolute_error(test[self.target], test['prediction'])
-            print(f'MAE Score on Test set: {mae:0.2f}')
+            
             rmse = np.sqrt(mean_squared_error(self.y_test.iloc[TIME_STEPS:], y_pred.flatten()))
             print(f"RMSE: {rmse}")
             end_time = time.time()
