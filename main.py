@@ -46,26 +46,26 @@ def main():
     #        'cpu',
     #        dataPost
     #    )   
-    model_xgboost = ModelBuilding(
-           "svr",
-           train_x,
-           train_y,
-           test_x,
-           test_y,
-           data.features,
-           'cpu',
-           dataPost
-       )   
-    # model_lstm = ModelBuilding(
-    #     "lstm",
-    #     train_x,
-    #     train_y,
-    #     test_x,
-    #     test_y,
-    #     data.features,
-    #     'PJMW_MW',
-    #     dataPost
-    #  )
+    # model_xgboost = ModelBuilding(
+    #        "svr",
+    #        train_x,
+    #        train_y,
+    #        test_x,
+    #        test_y,
+    #        data.features,
+    #        'cpu',
+    #        dataPost
+    #    )   
+    model_lstm = ModelBuilding(
+        "lstm",
+        train_x,
+        train_y,
+        test_x,
+        test_y,
+        data.features,
+        'cpu',
+        dataPost
+     )
 
     # model_cnn = ModelBuilding(
     #     "cnn",
@@ -74,7 +74,7 @@ def main():
     #     test_x,
     #     test_y,
     #     data.features,
-    #     'PJMW_MW',
+    #     'cpu',
     #     dataPost
     # )
 
