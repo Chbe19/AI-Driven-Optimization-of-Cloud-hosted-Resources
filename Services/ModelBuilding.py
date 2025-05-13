@@ -1,4 +1,5 @@
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 import xgboost as xgb
 from statsmodels.tsa.arima.model import ARIMA
 import pandas as pd
@@ -69,29 +70,22 @@ class ModelBuilding:
             self.X_test, self.y_test = self.X_test.align(self.y_test, join='inner', axis=0)
 
             # Check for stationarity
-            # plot_acf(self.y_train, lags=50)
-            # plt.title("ACF Plot") # P-values
-            # plt.show()
-            # plot_pacf(self.y_train, lags=50, method='ywm')
-            # plt.title("PACF Plot") # Q-values
-            # plt.show()
-            # plot_acf(self.y_train, lags=240)  # Check for seasonal lags (e.g., multiples of 24)
-            # plt.title("Seasonal ACF Plot")
-            # plt.show()
-            # plot_pacf(self.y_train, lags=240, method='ywm')
-            # plt.title("Seasonal PACF Plot")
-            # plt.show()
+            plot_acf(self.y_train, lags=50)
+            plt.title("ACF Plot") # P-values
+            plt.show()
+            plot_pacf(self.y_train, lags=50, method='ywm')
+            plt.title("PACF Plot") # Q-values
+            plt.show()
+            plot_acf(self.y_train, lags=240)  # Check for seasonal lags (e.g., multiples of 24)
+            plt.title("Seasonal ACF Plot")
+            plt.show()
+            plot_pacf(self.y_train, lags=240, method='ywm')
+            plt.title("Seasonal PACF Plot")
+            plt.show()
             #------------------------------------------------------
             start_time = time.time()
-            self.model = auto_arima(
-                self.y_train,
-                seasonal=True,
-                m=48,  # Seasonal period (e.g., 48 for half-hourly data with daily seasonality)
-                trace=True,  # Print the model selection process
-                error_action='ignore',  # Ignore errors and continue
-                suppress_warnings=True,  # Suppress warnings
-                stepwise=True,  # Use stepwise search to reduce computation time
-            )
+            self.model = SARIMAX(self.y_train, order=(3, 0, 3), seasonal_order=(2, 0, 1, 48),enforce_stationarity=False, enforce_invertibility=False)  # Example order (p=5, d=0, q=2) season (P,D=1,Q,s)
+            self.model = self.model.fit()
             end_time = time.time()
             print(f"Model fitting took {end_time - start_time:.2f} seconds.")
 
@@ -101,8 +95,7 @@ class ModelBuilding:
 
             # Forecast on the test set
             #.predict() ?
-            forecast = self.model.predict(n_periods=len(self.y_test))
-
+            forecast = self.model.forecast(steps=len(self.y_test))
             forecast = scaler.inverse_transform(forecast.values.reshape(-1, 1)).flatten()
             y_test_original = scaler.inverse_transform(self.y_test.values.reshape(-1, 1)).flatten()
 
@@ -113,6 +106,9 @@ class ModelBuilding:
             plt.title("ARIMA Forecast vs Actual")
             plt.legend()
             plt.show()
+            # Calculate MAE
+            mae = mean_absolute_error(self.y_test, forecast)
+            print(f'MAE Score on Test set: {mae:0.2f}')
             rmse = np.sqrt(mean_squared_error(self.y_test, forecast))
             print(f"RMSE: {rmse}")
         
@@ -268,63 +264,63 @@ class ModelBuilding:
         #     print("Fitting LSTM model...")
         #     start_time = time.time()
 
-        #     # Scale target
-        #     scaler = MinMaxScaler()
-        #     y_train_scaled = scaler.fit_transform(self.y_train.values.reshape(-1, 1))
-        #     y_test_scaled = scaler.transform(self.y_test.values.reshape(-1, 1))
+            # Scale target
+            scaler = MinMaxScaler()
+            y_train_scaled = scaler.fit_transform(self.y_train.values.reshape(-1, 1))
+            y_test_scaled = scaler.transform(self.y_test.values.reshape(-1, 1))
 
-        #     # LSTM behöver sekvenser (X timsteg bakåt för att förutsäga nästa steg)
-        #     def create_sequences(X, y, time_steps=24):
-        #         Xs, ys = [], []
-        #         for i in range(len(X) - time_steps):
-        #             v = X.iloc[i:(i + time_steps)].values
-        #             Xs.append(v)
-        #             ys.append(y[i + time_steps])
-        #         return np.array(Xs), np.array(ys)
+            # LSTM behöver sekvenser (X timsteg bakåt för att förutsäga nästa steg)
+            def create_sequences(X, y, time_steps=24):
+                Xs, ys = [], []
+                for i in range(len(X) - time_steps):
+                    v = X.iloc[i:(i + time_steps)].values
+                    Xs.append(v)
+                    ys.append(y[i + time_steps])
+                return np.array(Xs), np.array(ys)
 
-        #     TIME_STEPS = 24  # T.ex., använd 24 timmar bakåt för att förutsäga nästa
+            TIME_STEPS = 24  # T.ex., använd 24 timmar bakåt för att förutsäga nästa
 
-        #     X_train_seq, y_train_seq = create_sequences(self.X_train, y_train_scaled, TIME_STEPS)
-        #     X_test_seq, y_test_seq = create_sequences(self.X_test, y_test_scaled, TIME_STEPS)
+            X_train_seq, y_train_seq = create_sequences(self.X_train, y_train_scaled, TIME_STEPS)
+            X_test_seq, y_test_seq = create_sequences(self.X_test, y_test_scaled, TIME_STEPS)
 
-        #     # Skapa LSTM-modellen
-        #     model = Sequential()
-        #     model.add(tf.keras.Input(shape=(X_train_seq.shape[1], X_train_seq.shape[2]))) 
-        #     model.add(LSTM(64, activation='relu', return_sequences=True))  # Lägg till en LSTM som lämnar sekvenser
-        #     model.add(LSTM(32, activation='relu'))
-        #     model.add(Dense(1))
-        #     model.compile(optimizer='adam', loss='mse')
+            # Skapa LSTM-modellen
+            model = Sequential()
+            model.add(tf.keras.Input(shape=(X_train_seq.shape[1], X_train_seq.shape[2]))) 
+            model.add(LSTM(64, activation='relu', return_sequences=True))  # Lägg till en LSTM som lämnar sekvenser
+            model.add(LSTM(32, activation='relu'))
+            model.add(Dense(1))
+            model.compile(optimizer='adam', loss='mse')
 
-        #     # Träna modellen
-        #     history = model.fit(
-        #         X_train_seq, 
-        #         y_train_seq, 
-        #         epochs=20, 
-        #         batch_size=64, 
-        #         validation_split=0.1, 
-        #         verbose=1
-        #         )
+            # Träna modellen
+            history = model.fit(
+                X_train_seq, 
+                y_train_seq, 
+                epochs=20, 
+                batch_size=64, 
+                validation_split=0.1, 
+                verbose=1
+                )
 
-        #     self.model = model  # Spara modellen
+            self.model = model  # Spara modellen
 
-        #     # Prediktera
-        #     y_pred_scaled = model.predict(X_test_seq)
-        #     y_pred = scaler.inverse_transform(y_pred_scaled)
+            # Prediktera
+            y_pred_scaled = model.predict(X_test_seq)
+            y_pred = scaler.inverse_transform(y_pred_scaled)
 
-        #     # Justera test-indexet för att matcha sekvensen
-        #     test_index = self.y_test.index[TIME_STEPS:]
+            # Justera test-indexet för att matcha sekvensen
+            test_index = self.y_test.index[TIME_STEPS:]
 
-        #     plt.figure(figsize=(15, 5))
-        #     plt.plot(test_index, self.y_test.iloc[TIME_STEPS:], label='Actual')
-        #     plt.plot(test_index, y_pred.flatten(), label='Predicted')
-        #     plt.legend()
-        #     plt.title('LSTM Prediction vs Actual')
-        #     plt.show()
+            plt.figure(figsize=(15, 5))
+            plt.plot(test_index, self.y_test.iloc[TIME_STEPS:], label='Actual')
+            plt.plot(test_index, y_pred.flatten(), label='Predicted')
+            plt.legend()
+            plt.title('LSTM Prediction vs Actual')
+            plt.show()
 
-        #     rmse = np.sqrt(mean_squared_error(self.y_test.iloc[TIME_STEPS:], y_pred.flatten()))
-        #     print(f"RMSE: {rmse}")
-        #     end_time = time.time()
-        #     print(f"Process LSTM took {end_time - start_time:.2f} seconds.")
+            rmse = np.sqrt(mean_squared_error(self.y_test.iloc[TIME_STEPS:], y_pred.flatten()))
+            print(f"RMSE: {rmse}")
+            end_time = time.time()
+            print(f"Process LSTM took {end_time - start_time:.2f} seconds.")
     
         elif model_type.lower() == "cnn":
             self.train_cnn()
@@ -460,14 +456,19 @@ class ModelBuilding:
         plt.legend(['Truth Data', 'Predictions'])
         ax.set_title('XGBOOST: Raw Data and Prediction')
         plt.show()
-
+        print(self.y_train.head())
+        # Calculate MAE
+        mae = mean_absolute_error(test[self.target], test['prediction'])
+        print(f'MAE Score on Test set: {mae:0.2f}')
         # Calculate RMSE
         score = np.sqrt(mean_squared_error(test[self.target], test['prediction']))
         print(f'RMSE Score on Test set: {score:0.2f}')
         print("Mean of y_test:", test[self.target].mean())  # Use inverse-transformed y_test
         print("Standard Deviation of y_test:", test[self.target].std())  # Use inverse-transformed y_test
+        print("Mean of y_train:", self.y_train.mean())  # Use inverse-transformed y_test
+        print("Standard Deviation of y_train:", self.y_train.std())  # Use inverse-transformed y_test
         relative_error = (score / test[self.target].mean()) * 100
-        print(f"Relative Error: {relative_error:.2f}%")        
+        print(f"Relative Error(RMSE): {relative_error:.2f}%")        
 
     def tune_xgboost(self, X_train, y_train):
         """
@@ -585,13 +586,16 @@ class ModelBuilding:
         ax.set_title('Random Forest: Raw Data and Prediction')
         plt.show()
 
+        # Calculate MAE
+        mae = mean_absolute_error(test[self.target], test['prediction'])
+        print(f'MAE Score on Test set: {mae:0.2f}')
         # Calculate RMSE
         score = np.sqrt(mean_squared_error(test[self.target], test['prediction']))
         print(f'RMSE Score on Test set: {score:0.2f}')
         print("Mean of y_test:", test[self.target].mean())
         print("Standard Deviation of y_test:", test[self.target].std())
         relative_error = (score / test[self.target].mean()) * 100
-        print(f"Relative Error: {relative_error:.2f}%")
+        print(f"Relative Error (RMSE): {relative_error:.2f}%")
 
     def tune_randomforest(self, X_train, y_train):
         """
@@ -696,13 +700,16 @@ class ModelBuilding:
         ax.set_title('SVR: Raw Data and Prediction')
         plt.show()
 
+        # Calculate MAE
+        mae = mean_absolute_error(test[self.target], test['prediction'])
+        print(f'MAE Score on Test set: {mae:0.2f}')
         # Calculate RMSE
-        score = np.sqrt(mean_squared_error(test[self.target], test['prediction']))
-        print(f'RMSE Score on Test set: {score:0.2f}')
+        rmse = np.sqrt(mean_squared_error(test[self.target], test['prediction']))
+        print(f'RMSE Score on Test set: {rmse:0.2f}')
         print("Mean of y_test:", test[self.target].mean())
         print("Standard Deviation of y_test:", test[self.target].std())
-        relative_error = (score / test[self.target].mean()) * 100
-        print(f"Relative Error: {relative_error:.2f}%")
+        relative_error = (rmse / test[self.target].mean()) * 100
+        print(f"Relative Error (RMSE): {relative_error:.2f}%")
 
     def tune_svr(self, X_train, y_train):
         """
@@ -718,9 +725,9 @@ class ModelBuilding:
         """
         # Define the parameter grid
         param_grid = {
-            'C': [0.1, 1, 10, 100],  # Regularization parameter
-            'epsilon': [0.01, 0.1, 0.2, 0.5],  # Epsilon in the epsilon-SVR model
-            'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],  # Kernel type
+            'C': [0.1, 1, 10],  # Regularization parameter
+            'epsilon': [0.01, 0.1, 0.2],  # Epsilon in the epsilon-SVR model
+            'kernel': ['linear', 'poly', 'sigmoid'],  # Kernel type ['linear', 'poly', 'rbf', 'sigmoid']
             'gamma': ['scale', 'auto'],  # Kernel coefficient
         }
 
