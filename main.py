@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 #pip install numpy==1.23.5 // compatible version for tensorflow pip install tensorflow==2.10.1
 def main():
     #remove_empty_rows('data/vmCloud_data_filtered.csv', 'data/vmCloud_data_cleaned.csv')
-    df = pd.read_csv('data/cpu_usage_full_period.csv', index_col=0, parse_dates=True)
+    df = pd.read_csv('data/synthetic_cpu_year_2025.csv', index_col=0, parse_dates=True)
 
     data = DataPreprocessor(df, 0.2)
     features = []
