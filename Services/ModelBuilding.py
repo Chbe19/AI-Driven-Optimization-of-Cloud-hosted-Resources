@@ -1,4 +1,4 @@
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import xgboost as xgb
 from statsmodels.tsa.arima.model import ARIMA
 import pandas as pd
@@ -64,22 +64,23 @@ class ModelBuilding:
             # Ensure indices are aligned between y_test and X_test (if needed later)
             self.X_test, self.y_test = self.X_test.align(self.y_test, join='inner', axis=0)
 
-            # Check for stationarity
-            plot_acf(self.y_train, lags=50)
-            plt.title("ACF Plot") # P-values
-            plt.show()
-            plot_pacf(self.y_train, lags=50, method='ywm')
-            plt.title("PACF Plot") # Q-values
-            plt.show()
-            plot_acf(self.y_train, lags=240)  # Check for seasonal lags (e.g., multiples of 24)
-            plt.title("Seasonal ACF Plot")
-            plt.show()
-            plot_pacf(self.y_train, lags=240, method='ywm')
-            plt.title("Seasonal PACF Plot")
-            plt.show()
+            # # Check for stationarity
+            # plot_acf(self.y_train, lags=50)
+            # plt.title("ACF Plot") # P-values
+            # plt.show()
+            # plot_pacf(self.y_train, lags=50, method='ywm')
+            # plt.title("PACF Plot") # Q-values
+            # plt.show()
+            # plot_acf(self.y_train, lags=240)  # Check for seasonal lags (e.g., multiples of 24)
+            # plt.title("Seasonal ACF Plot")
+            # plt.show()
+            # plot_pacf(self.y_train, lags=240, method='ywm')
+            # plt.title("Seasonal PACF Plot")
+            # plt.show()
             #------------------------------------------------------
             start_time = time.time()
-            self.model = SARIMAX(self.y_train, order=(3, 0, 3), seasonal_order=(2, 0, 1, 48),enforce_stationarity=False, enforce_invertibility=False)  # Example order (p=5, d=0, q=2) season (P,D=1,Q,s)
+           # self.model = SARIMAX(self.y_train, order=(3, 0, 3), seasonal_order=(1, 0, 1, 48),enforce_stationarity=False, enforce_invertibility=False)  # Example order (p=5, d=0, q=2) season (P,D=1,Q,s)
+            self.model = ARIMA(self.y_train, order=(5, 0, 3))  # Example order (p=3, d=0, q=3)
             self.model = self.model.fit()
             end_time = time.time()
             print(f"Model fitting took {end_time - start_time:.2f} seconds.")
@@ -90,7 +91,7 @@ class ModelBuilding:
 
             # Forecast on the test set
             #.predict() ?
-            forecast = self.model.forecast(steps=len(self.y_test))
+            forecast = self.model.forecast(len(self.y_test))
             forecast = scaler.inverse_transform(forecast.values.reshape(-1, 1)).flatten()
             y_test_original = scaler.inverse_transform(self.y_test.values.reshape(-1, 1)).flatten()
 
@@ -370,13 +371,16 @@ class ModelBuilding:
         plt.legend(['Truth Data', 'Predictions'])
         ax.set_title('XGBOOST: Raw Data and Prediction')
         plt.show()
-        print(self.y_train.head())
+
         # Calculate MAE
         mae = mean_absolute_error(test[self.target], test['prediction'])
         print(f'MAE Score on Test set: {mae:0.2f}')
         # Calculate RMSE
         score = np.sqrt(mean_squared_error(test[self.target], test['prediction']))
         print(f'RMSE Score on Test set: {score:0.2f}')
+        # Calculate R^2 Score
+        r_square = r2_score(test[self.target], test['prediction'])
+        print(f'R^2 Score on Test set: {r_square:0.2f}')
         print("Mean of y_test:", test[self.target].mean())  # Use inverse-transformed y_test
         print("Standard Deviation of y_test:", test[self.target].std())  # Use inverse-transformed y_test
         print("Mean of y_train:", self.y_train.mean())  # Use inverse-transformed y_test
@@ -506,6 +510,9 @@ class ModelBuilding:
         # Calculate RMSE
         score = np.sqrt(mean_squared_error(test[self.target], test['prediction']))
         print(f'RMSE Score on Test set: {score:0.2f}')
+        # Calculate R^2 Score
+        r_square = r2_score(test[self.target], test['prediction'])
+        print(f'R^2 Score on Test set: {r_square:0.2f}')
         print("Mean of y_test:", test[self.target].mean())
         print("Standard Deviation of y_test:", test[self.target].std())
         relative_error = (score / test[self.target].mean()) * 100
@@ -620,6 +627,9 @@ class ModelBuilding:
         # Calculate RMSE
         rmse = np.sqrt(mean_squared_error(test[self.target], test['prediction']))
         print(f'RMSE Score on Test set: {rmse:0.2f}')
+        # Calculate R^2 Score
+        r_square = r2_score(test[self.target], test['prediction'])
+        print(f'R^2 Score on Test set: {r_square:0.2f}')
         print("Mean of y_test:", test[self.target].mean())
         print("Standard Deviation of y_test:", test[self.target].std())
         relative_error = (rmse / test[self.target].mean()) * 100
@@ -641,7 +651,7 @@ class ModelBuilding:
         param_grid = {
             'C': [0.1, 1, 10],  # Regularization parameter
             'epsilon': [0.01, 0.1, 0.2],  # Epsilon in the epsilon-SVR model
-            'kernel': ['linear', 'poly', 'sigmoid'],  # Kernel type ['linear', 'poly', 'rbf', 'sigmoid']
+            'kernel': ['linear'],  # Kernel type ['linear', 'poly', 'rbf', 'sigmoid']
             'gamma': ['scale', 'auto'],  # Kernel coefficient
         }
 
