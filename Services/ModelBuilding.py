@@ -65,21 +65,21 @@ class ModelBuilding:
             self.X_test, self.y_test = self.X_test.align(self.y_test, join='inner', axis=0)
 
             # Check for stationarity
-            # plot_acf(self.y_train, lags=50)
-            # plt.title("ACF Plot") # P-values
-            # plt.show()
-            # plot_pacf(self.y_train, lags=50, method='ywm')
-            # plt.title("PACF Plot") # Q-values
-            # plt.show()
-            # plot_acf(self.y_train, lags=240)  # Check for seasonal lags (e.g., multiples of 24)
-            # plt.title("Seasonal ACF Plot")
-            # plt.show()
-            # plot_pacf(self.y_train, lags=240, method='ywm')
-            # plt.title("Seasonal PACF Plot")
-            # plt.show()
+            plot_acf(self.y_train, lags=50)
+            plt.title("ACF Plot") # P-values
+            plt.show()
+            plot_pacf(self.y_train, lags=50, method='ywm')
+            plt.title("PACF Plot") # Q-values
+            plt.show()
+            plot_acf(self.y_train, lags=240)  # Check for seasonal lags (e.g., multiples of 24)
+            plt.title("Seasonal ACF Plot")
+            plt.show()
+            plot_pacf(self.y_train, lags=240, method='ywm')
+            plt.title("Seasonal PACF Plot")
+            plt.show()
             #------------------------------------------------------
             start_time = time.time()
-            self.model = SARIMAX(self.y_train, order=(2, 0, 7), seasonal_order=(1, 0, 2, 48),enforce_stationarity=False, enforce_invertibility=False)  # Example order (p=5, d=0, q=2) season (P,D=1,Q,s)
+            self.model = SARIMAX(self.y_train, order=(3, 0, 3), seasonal_order=(2, 0, 1, 48),enforce_stationarity=False, enforce_invertibility=False)  # Example order (p=5, d=0, q=2) season (P,D=1,Q,s)
             self.model = self.model.fit()
             end_time = time.time()
             print(f"Model fitting took {end_time - start_time:.2f} seconds.")
@@ -370,7 +370,7 @@ class ModelBuilding:
         plt.legend(['Truth Data', 'Predictions'])
         ax.set_title('XGBOOST: Raw Data and Prediction')
         plt.show()
-
+        print(self.y_train.head())
         # Calculate MAE
         mae = mean_absolute_error(test[self.target], test['prediction'])
         print(f'MAE Score on Test set: {mae:0.2f}')
@@ -379,6 +379,8 @@ class ModelBuilding:
         print(f'RMSE Score on Test set: {score:0.2f}')
         print("Mean of y_test:", test[self.target].mean())  # Use inverse-transformed y_test
         print("Standard Deviation of y_test:", test[self.target].std())  # Use inverse-transformed y_test
+        print("Mean of y_train:", self.y_train.mean())  # Use inverse-transformed y_test
+        print("Standard Deviation of y_train:", self.y_train.std())  # Use inverse-transformed y_test
         relative_error = (score / test[self.target].mean()) * 100
         print(f"Relative Error(RMSE): {relative_error:.2f}%")        
 
