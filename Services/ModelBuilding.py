@@ -630,6 +630,20 @@ class ModelBuilding:
         best_params, self.model = self.tune_svr(self.X_train, self.y_train)
         self.model.fit(self.X_train, self.y_train)
 
+        # Calculate training and validation RMSE
+        y_train_pred = self.model.predict(self.X_train)
+        y_test_pred = self.model.predict(self.X_test)
+        train_mse = mean_squared_error(scaler.inverse_transform(self.y_train.values.reshape(-1, 1)), scaler.inverse_transform(y_train_pred.reshape(-1, 1)))
+        val_mse = mean_squared_error(scaler.inverse_transform(self.y_test.values.reshape(-1, 1)), scaler.inverse_transform(y_test_pred.reshape(-1, 1)))
+
+        # Bar plot for RMSE
+        plt.figure(figsize=(6, 4))
+        plt.bar(['Train RMSE', 'Validation RMSE'], [train_mse, val_mse], color=['blue', 'orange'])
+        plt.title('Random Forest RMSE')
+        plt.ylabel('RMSE')
+        plt.show()
+
+
         # Predict
         y_pred_scaled = self.model.predict(self.X_test)
 
