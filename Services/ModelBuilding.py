@@ -14,9 +14,9 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.svm import SVR
 # from pmdarima import auto_arima 
 
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Conv1D, MaxPooling1D, Flatten, Dropout
+# import tensorflow as tf
+# from tensorflow.keras.models import Sequential
+# from tensorflow.keras.layers import LSTM, Dense, Conv1D, MaxPooling1D, Flatten, Dropout
 
 
 class ModelBuilding:
@@ -346,17 +346,33 @@ class ModelBuilding:
         self.X_test, self.y_test = self.X_test.align(self.y_test, join='inner', axis=0)
 
         # Tune and train the model
+        evals_result = {}
         best_params, self.model = self.tune_xgboost(self.X_train, self.y_train)
+        self.model.set_params(eval_metric="rmse",evals_result = evals_result)
         self.model.fit(
             self.X_train,
             self.y_train,
             eval_set=[(self.X_train, self.y_train), (self.X_test, self.y_test)],
-            verbose=100
+            verbose=100,
+            
         )
         fi = pd.DataFrame(data=self.model.feature_importances_,
                         index=self.model.feature_names_in_,
                         columns=['importance'])
         fi.sort_values('importance').plot(kind='barh', title='Feature Importance')
+
+        
+        # Plot training and validation loss
+        train_rmse = evals_result['validation_0']['rmse']
+        val_rmse = evals_result['validation_1']['rmse']
+        plt.figure(figsize=(8, 4))
+        plt.plot(train_rmse, label='Train RMSE')
+        plt.plot(val_rmse, label='Validation RMSE')
+        plt.xlabel('Boosting Round')
+        plt.ylabel('RMSE')
+        plt.title('XGBoost Training and Validation RMSE')
+        plt.legend()
+        plt.show()
 
         # Create a DataFrame for the test set
         test = pd.DataFrame(self.X_test.copy())
@@ -472,6 +488,20 @@ class ModelBuilding:
         # Tune and train the model
         best_params, self.model = self.tune_randomforest(self.X_train, self.y_train)
         self.model.fit(self.X_train, self.y_train)
+
+         # Calculate training and validation RMSE
+        y_train_pred = self.model.predict(self.X_train)
+        y_test_pred = self.model.predict(self.X_test)
+        train_mse = mean_squared_error(scaler.inverse_transform(self.y_train.values.reshape(-1, 1)), scaler.inverse_transform(y_train_pred.reshape(-1, 1)))
+        val_mse = mean_squared_error(scaler.inverse_transform(self.y_test.values.reshape(-1, 1)), scaler.inverse_transform(y_test_pred.reshape(-1, 1)))
+
+        # Bar plot for RMSE
+        plt.figure(figsize=(6, 4))
+        plt.bar(['Train RMSE', 'Validation RMSE'], [train_mse, val_mse], color=['blue', 'orange'])
+        plt.title('Random Forest RMSE')
+        plt.ylabel('RMSE')
+        plt.show()
+
 
         # Feature Importance
         importances = self.model.feature_importances_
