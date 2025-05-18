@@ -346,33 +346,18 @@ class ModelBuilding:
         self.X_test, self.y_test = self.X_test.align(self.y_test, join='inner', axis=0)
 
         # Tune and train the model
-        evals_result = {}
         best_params, self.model = self.tune_xgboost(self.X_train, self.y_train)
-        self.model.set_params(eval_metric="rmse",evals_result = evals_result)
         self.model.fit(
             self.X_train,
             self.y_train,
             eval_set=[(self.X_train, self.y_train), (self.X_test, self.y_test)],
             verbose=100,
-            
         )
         fi = pd.DataFrame(data=self.model.feature_importances_,
                         index=self.model.feature_names_in_,
                         columns=['importance'])
         fi.sort_values('importance').plot(kind='barh', title='Feature Importance')
 
-        
-        # Plot training and validation loss
-        train_rmse = evals_result['validation_0']['rmse']
-        val_rmse = evals_result['validation_1']['rmse']
-        plt.figure(figsize=(8, 4))
-        plt.plot(train_rmse, label='Train RMSE')
-        plt.plot(val_rmse, label='Validation RMSE')
-        plt.xlabel('Boosting Round')
-        plt.ylabel('RMSE')
-        plt.title('XGBoost Training and Validation RMSE')
-        plt.legend()
-        plt.show()
 
         # Create a DataFrame for the test set
         test = pd.DataFrame(self.X_test.copy())

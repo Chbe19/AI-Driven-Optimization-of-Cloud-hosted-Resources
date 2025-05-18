@@ -37,16 +37,16 @@ def main():
     #       target="cpu",
     #       data=dataPost
     #   )
-    model_xgboost = ModelBuilding(
-           "randomforest",
-           train_x,
-           train_y,
-           test_x,
-           test_y,
-           data.features,
-           'cpu',
-           dataPost
-       )   
+    # model_xgboost = ModelBuilding(
+    #        "randomforest",
+    #        train_x,
+    #        train_y,
+    #        test_x,
+    #        test_y,
+    #        data.features,
+    #        'cpu',
+    #        dataPost
+    #    )   
     # model_xgboost = ModelBuilding(
     #        "svr",
     #        train_x,
