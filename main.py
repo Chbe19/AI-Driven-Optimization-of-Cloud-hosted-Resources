@@ -75,7 +75,7 @@ def main():
     #     test_x,
     #     test_y,
     #     data.features,
-    #     'PJMW_MW',
+    #     'cpu',
     #     dataPost
     # )
 
