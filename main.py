@@ -7,25 +7,25 @@ import matplotlib.pyplot as plt
 #pip install numpy==1.23.5 // compatible version for tensorflow pip install tensorflow==2.10.1
 def main():
     #remove_empty_rows('data/vmCloud_data_filtered.csv', 'data/vmCloud_data_cleaned.csv')
-    df = pd.read_csv('data/synthetic_cpu_year_2025.csv', index_col=0, parse_dates=True)
+    df = pd.read_csv('data/db01/norcedb01_ram_usage.csv', index_col=0, parse_dates=True)
 
     data = DataPreprocessor(df, 0.2)
     features = []
     data.set_features(features)
-    train_x, train_y = data.get_training_set('cpu')
-    test_x, test_y = data.get_testing_set('cpu')
+    train_x, train_y = data.get_training_set('memory')
+    test_x, test_y = data.get_testing_set('memory')
     dataPost = data.get_data_frame()
     
-    # model_xgboost = ModelBuilding(
-    #        "xgboost",
-    #        train_x,
-    #        train_y,
-    #        test_x,
-    #        test_y,
-    #        data.features,
-    #        'cpu',
-    #        dataPost
-    #    )   
+    model_xgboost = ModelBuilding(
+           "xgboost",
+           train_x,
+           train_y,
+           test_x,
+           test_y,
+           data.features,
+           'memory',
+           dataPost
+       )   
 
     # model_arima = ModelBuilding(
     #       model_type="arima",
