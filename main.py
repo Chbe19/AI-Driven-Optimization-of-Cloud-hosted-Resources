@@ -10,22 +10,42 @@ def main():
     df = pd.read_csv('data/db01/norcedb01_ram_usage.csv', index_col=0, parse_dates=True)
 
     data = DataPreprocessor(df, 0.2)
-    features = []
+    features = ['month', 'day', 'hour', 'minute']
     data.set_features(features)
     train_x, train_y = data.get_training_set('memory')
     test_x, test_y = data.get_testing_set('memory')
     dataPost = data.get_data_frame()
     
-    model_xgboost = ModelBuilding(
-           "xgboost",
-           train_x,
-           train_y,
-           test_x,
-           test_y,
-           data.features,
-           'memory',
-           dataPost
-       )   
+    # model_xgboost = ModelBuilding(
+    #        "xgboost",
+    #        train_x,
+    #        train_y,
+    #        test_x,
+    #        test_y,
+    #        data.features,
+    #        'memory',
+    #        dataPost
+    #    )   
+    # model_catboost = ModelBuilding(
+    #        "catboost",
+    #        train_x,
+    #        train_y,
+    #        test_x,
+    #        test_y,
+    #        data.features,
+    #        'memory',
+    #        dataPost
+    #    )
+    # model_gru = ModelBuilding(
+    #     "gru",
+    #     train_x,
+    #     train_y,
+    #     test_x,
+    #     test_y,
+    #     data.features,
+    #     'memory',
+    #     dataPost
+    #  )
 
     # model_arima = ModelBuilding(
     #       model_type="arima",
@@ -75,7 +95,7 @@ def main():
     #     test_x,
     #     test_y,
     #     data.features,
-    #     'cpu',
+    #     'memory',
     #     dataPost
     # )
 
