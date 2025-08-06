@@ -10,7 +10,7 @@ def main():
     df = pd.read_csv('data/synthetic_cpu_year_2025.csv', index_col=0, parse_dates=True)
 
     data = DataPreprocessor(df, 0.2)
-    features = []
+    features = ['day', 'month', 'hour', 'minute']
     data.set_features(features)
     train_x, train_y = data.get_training_set('cpu')
     test_x, test_y = data.get_testing_set('cpu')
@@ -27,16 +27,16 @@ def main():
     #        dataPost
     #    )   
 
-    model_arima = ModelBuilding(
-          model_type="arima",
-          X_train=train_x,  # ARIMA doesn't use features, so pass None
-          y_train=train_y,
-          X_test=test_x,   # ARIMA doesn't use features, so pass None
-          y_test=test_y,
-          features=None,
-          target="cpu",
-          data=dataPost
-      )
+    # model_arima = ModelBuilding(
+    #       model_type="arima",
+    #       X_train=train_x,  # ARIMA doesn't use features, so pass None
+    #       y_train=train_y,
+    #       X_test=test_x,   # ARIMA doesn't use features, so pass None
+    #       y_test=test_y,
+    #       features=None,
+    #       target="cpu",
+    #       data=dataPost
+    #   )
     # model_xgboost = ModelBuilding(
     #        "randomforest",
     #        train_x,
@@ -64,7 +64,7 @@ def main():
     #     test_x,
     #     test_y,
     #     data.features,
-    #     'PJMW_MW',
+    #     'cpu',
     #     dataPost
     #  )
 
@@ -89,6 +89,17 @@ def main():
     #  'cpu',
     #  dataPost
     #  )
+
+    model_cnn_lstm = ModelBuilding(
+     "autoencoder",
+     train_x,
+     train_y,
+     test_x,
+     test_y,
+     data.features,
+     'cpu',
+     dataPost
+     )
 
 
 
