@@ -1,5 +1,5 @@
 import shutil
-import os, mean_absolute_percentage_error
+import os
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import xgboost as xgb
 from catboost import CatBoostRegressor
@@ -24,11 +24,10 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential # type: ignore
 from tensorflow.keras.optimizers import Adam # type: ignore
 from tensorflow.keras.regularizers import l2 # type: ignore
-from tensorflow.keras.layers import LSTM, Dense, Conv1D, MaxPooling1D, Flatten, Dropout, GRU, BatchNormalization, GlobalAveragePooling1D, TimeDistributed, Input, LayerNormalization, InputLayer, RepeatVector # type: ignore
-from tensorflow.keras.callbacks import EarlyStopping # type: ignore
+from tensorflow.keras.layers import LSTM, Dense, Conv1D, MaxPooling1D, Flatten, Dropout, GRU, BatchNormalization, GlobalAveragePooling1D, TimeDistributed, Input, LayerNormalization, InputLayer, RepeatVector# type: ignore
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau  # type: ignore
 import keras_tuner as kt
-, ReduceLROnPlateau
-from tensorflow.keras.losses import Huber
+from tensorflow.keras.losses import Huber # type: ignore
 
 
 
@@ -1257,7 +1256,7 @@ class ModelBuilding:
         print(f"Mean: {np.mean(y_actual):.2f}")
         print(f"Std: {np.std(y_actual):.2f}")
 
-def train_gru(self):
+    def train_gru(self):
         print("Tuning GRU model with KerasTuner...")
         TIME_STEPS = 48  # 1 day for 30-min data
         EPOCHS = 30
