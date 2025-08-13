@@ -36,16 +36,16 @@ def main():
     #        'memory',
     #        dataPost
     #    )
-    model_gru = ModelBuilding(
-         "gru",
-         train_x,
-         train_y,
-         test_x,
-         test_y,
-         data.features,
-         'memory',
-         dataPost
-      )
+    # model_gru = ModelBuilding(
+    #      "gru",
+    #      train_x,
+    #      train_y,
+    #      test_x,
+    #      test_y,
+    #      data.features,
+    #      'memory',
+    #      dataPost
+    #   )
 
     # model_arima = ModelBuilding(
     #       model_type="arima",
@@ -84,23 +84,34 @@ def main():
     #     test_x,
     #     test_y,
     #     data.features,
-    #     'PJMW_MW',
+    #     'cpu',
     #     dataPost
     #  )
 
-    # model_cnn = ModelBuilding(
-    #     "cnn",
-    #     train_x,
-    #     train_y,
-    #     test_x,
-    #     test_y,
-    #     data.features,
-    #     'memory',
-    #     dataPost
-    # )
+    model_cnn = ModelBuilding(
+        "cnn",
+        train_x,
+        train_y,
+        test_x,
+        test_y,
+        data.features,
+        'memory',
+        dataPost
+    )
 
     # model_cnn_lstm = ModelBuilding(
     #  "cnn-lstm",
+    #  train_x,
+    #  train_y,
+    #  test_x,
+    #  test_y,
+    #  data.features,
+    #  'cpu',
+    #  dataPost
+    #  )
+
+    # model_cnn_lstm = ModelBuilding(
+    #  "autoencoder",
     #  train_x,
     #  train_y,
     #  test_x,
