@@ -21,9 +21,9 @@ import torch
 import torch.nn as nn
 
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Conv1D, MaxPooling1D, Flatten, Dropout, GRU
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.models import Sequential # type: ignore
+from tensorflow.keras.layers import LSTM, Dense, Conv1D, MaxPooling1D, Flatten, Dropout, GRU # type: ignore
+from tensorflow.keras.callbacks import EarlyStopping # type: ignore
 import keras_tuner as kt
 
 
