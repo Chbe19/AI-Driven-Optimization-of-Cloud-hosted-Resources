@@ -146,7 +146,9 @@ def train_gan(loader, scaler, output_file, seq_len, num_epochs=200):
 
 
 # Load and preprocess the 5-month dataset
-df_5_months = pd.read_csv("data/cpu_usage_full_period.csv", index_col=0, parse_dates=True)
+df_5_months = pd.read_csv("data/db01/norcedb01_ram_usage.csv", index_col=0, parse_dates=True)
+# Take only a fifth of the rows
+df_5_months = df_5_months.iloc[:len(df_5_months)//5]
 preprocessed_5_months = DataPreprocessor(df_5_months).get_data_frame()
 scaler_5_months = MinMaxScaler()
 scaled_5_months = scaler_5_months.fit_transform(preprocessed_5_months)
@@ -161,6 +163,6 @@ dataset_5_months = TensorDataset(tensor_data_5_months)
 loader_5_months = DataLoader(dataset_5_months, batch_size=64, shuffle=True)
 
 # Train GAN for the 5-month dataset to generate 1 year of data
-train_gan(loader_5_months, scaler_5_months, "data/synthetic_cpu_year_2025.csv", seq_len_30min)
+train_gan(loader_5_months, scaler_5_months, "data/db01/norcedb01_ram_usage_synthetic.csv", seq_len_30min)
 
 # 200 Epochs, D_loss and G_loss 

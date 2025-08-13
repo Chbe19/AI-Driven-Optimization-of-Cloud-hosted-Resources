@@ -1,6 +1,8 @@
-from sklearn.metrics import mean_squared_error, mean_absolute_error, mean_absolute_percentage_error
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+import shutil
+import os, mean_absolute_percentage_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import xgboost as xgb
+from catboost import CatBoostRegressor
 from statsmodels.tsa.arima.model import ARIMA
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -13,16 +15,19 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV, KFold
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.svm import SVR
+
 # from pmdarima import auto_arima
 import torch
 import torch.nn as nn
 
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.regularizers import l2
-from tensorflow.keras.layers import LSTM, Dense, Conv1D, MaxPooling1D, Flatten, Dropout, BatchNormalization, GlobalAveragePooling1D, TimeDistributed, Input, LayerNormalization, InputLayer, RepeatVector
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from tensorflow.keras.models import Sequential # type: ignore
+from tensorflow.keras.optimizers import Adam # type: ignore
+from tensorflow.keras.regularizers import l2 # type: ignore
+from tensorflow.keras.layers import LSTM, Dense, Conv1D, MaxPooling1D, Flatten, Dropout, GRU, BatchNormalization, GlobalAveragePooling1D, TimeDistributed, Input, LayerNormalization, InputLayer, RepeatVector # type: ignore
+from tensorflow.keras.callbacks import EarlyStopping # type: ignore
+import keras_tuner as kt
+, ReduceLROnPlateau
 from tensorflow.keras.losses import Huber
 
 
@@ -45,7 +50,10 @@ class ModelBuilding:
     def initialize_model(self, model_type):
         if model_type.lower() == "xgboost":
             self.model_xgboost()
- 
+        elif model_type.lower() == "catboost":
+            self.model_catboost()
+        elif model_type.lower() == "gru":
+            self.train_gru()
         elif model_type.lower() == "arima":
             # ARIMA implementation
             print("Fitting ARIMA model...")
@@ -72,19 +80,19 @@ class ModelBuilding:
             # Ensure indices are aligned between y_test and X_test (if needed later)
             self.X_test, self.y_test = self.X_test.align(self.y_test, join='inner', axis=0)
 
-            # Check for stationarity
-            plot_acf(self.y_train, lags=50)
-            plt.title("ACF Plot") # P-values
-            plt.show()
-            plot_pacf(self.y_train, lags=50, method='ywm')
-            plt.title("PACF Plot") # Q-values
-            plt.show()
-            plot_acf(self.y_train, lags=240)  # Check for seasonal lags (e.g., multiples of 24)
-            plt.title("Seasonal ACF Plot")
-            plt.show()
-            plot_pacf(self.y_train, lags=240, method='ywm')
-            plt.title("Seasonal PACF Plot")
-            plt.show()
+            # # Check for stationarity
+            # plot_acf(self.y_train, lags=50)
+            # plt.title("ACF Plot") # P-values
+            # plt.show()
+            # plot_pacf(self.y_train, lags=50, method='ywm')
+            # plt.title("PACF Plot") # Q-values
+            # plt.show()
+            # plot_acf(self.y_train, lags=240)  # Check for seasonal lags (e.g., multiples of 24)
+            # plt.title("Seasonal ACF Plot")
+            # plt.show()
+            # plot_pacf(self.y_train, lags=240, method='ywm')
+            # plt.title("Seasonal PACF Plot")
+            # plt.show()
             #------------------------------------------------------
             start_time = time.time()
             self.model = SARIMAX(self.y_train, exog=self.X_train ,order=(2, 0, 7), seasonal_order=(1, 1, 2, 24))  # Example order (p=5, d=0, q=2) season (P,D=1,Q,s)
@@ -314,12 +322,36 @@ class ModelBuilding:
 
         # Tune and train the model
         best_params, self.model = self.tune_xgboost(self.X_train, self.y_train)
+        eval_set = [(self.X_train, self.y_train), (self.X_test, self.y_test)]
+        self.model.set_params(eval_metric='rmse')
         self.model.fit(
             self.X_train,
             self.y_train,
-            eval_set=[(self.X_train, self.y_train), (self.X_test, self.y_test)],
-            verbose=100
+            eval_set= eval_set,
+            verbose=100,
         )
+
+        # Try to retrieve evaluation results
+        if hasattr(self.model, 'evals_result'):
+            evals_result = self.model.evals_result()
+            train_loss = evals_result['validation_0']['rmse']
+            val_loss = evals_result['validation_1']['rmse']
+
+            # Plot training and validation loss
+            plt.figure(figsize=(10, 5))
+            plt.plot(train_loss, label='Training RMSE')
+            plt.plot(val_loss, label='Validation RMSE')
+            plt.xlabel('Boosting Round')
+            plt.ylabel('RMSE')
+            plt.title('XGBoost Training and Validation Loss')
+            plt.legend()
+            plt.grid(True, linestyle='--', alpha=0.3)
+            plt.tight_layout()
+            plt.show()
+        else:
+            print("evals_result is not available in this XGBoost version.")
+        
+        # Feature importance
         fi = pd.DataFrame(data=self.model.feature_importances_,
                         index=self.model.feature_names_in_,
                         columns=['importance'])
@@ -338,21 +370,24 @@ class ModelBuilding:
         plt.legend(['Truth Data', 'Predictions'])
         ax.set_title('XGBOOST: Raw Data and Prediction')
         plt.show()
-        print(self.y_train.head())
+
         # Calculate MAE
         mae = mean_absolute_error(test[self.target], test['prediction'])
         print(f'MAE Score on Test set: {mae:0.2f}')
         # Calculate RMSE
         score = np.sqrt(mean_squared_error(test[self.target], test['prediction']))
         print(f'RMSE Score on Test set: {score:0.2f}')
+        # Calculate R^2 Score
+        r_square = r2_score(test[self.target], test['prediction'])
+        print(f'R^2 Score on Test set: {r_square:0.2f}')
         print("Mean of y_test:", test[self.target].mean())  # Use inverse-transformed y_test
         print("Standard Deviation of y_test:", test[self.target].std())  # Use inverse-transformed y_test
         print("Mean of y_train:", self.y_train.mean())  # Use inverse-transformed y_test
         print("Standard Deviation of y_train:", self.y_train.std())  # Use inverse-transformed y_test
         relative_error = (score / test[self.target].mean()) * 100
         print(f"Relative Error(RMSE): {relative_error:.2f}%")
-        relative_mae = (mae / test[self.target].mean()) * 100
-        print(f"Relative Error (MAE): {relative_mae:.2f}%")        
+        relative_error_mae = (mae / test[self.target].mean()) * 100
+        print(f"Relative Error(MAE): {relative_error_mae:.2f}%")        
 
     def tune_xgboost(self, X_train, y_train):
         """
@@ -407,7 +442,128 @@ class ModelBuilding:
         print("Best RMSE (negative MSE):", np.sqrt(-random_search.best_score_))
 
         return best_params, best_model
-    
+
+    def model_catboost(self):
+        print("Fitting CatBoost model...")
+
+        # Scale y_train
+        scaler = MinMaxScaler()
+        self.y_train = pd.Series(scaler.fit_transform(self.y_train.values.reshape(-1, 1)).flatten(), index=self.y_train.index)
+        self.y_test = pd.Series(scaler.transform(self.y_test.values.reshape(-1, 1)).flatten(), index=self.y_test.index)
+
+        # Feature engineering (reuse your lag/rolling code if needed)
+        for lag in range(1, 3):
+            self.X_train[f'cpu_lag_{lag}'] = self.y_train.shift(lag)
+            self.X_test[f'cpu_lag_{lag}'] = self.y_test.shift(lag)
+        self.X_train['cpu_rolling_mean_3'] = self.y_train.rolling(window=3).mean()
+        self.X_test['cpu_rolling_mean_3'] = self.y_test.rolling(window=3).mean()
+        self.X_train['cpu_rolling_std_3'] = self.y_train.rolling(window=3).std()
+        self.X_test['cpu_rolling_std_3'] = self.y_test.rolling(window=3).std()
+
+        self.X_train = self.X_train.dropna()
+        self.X_test = self.X_test.dropna()
+        self.X_train, self.y_train = self.X_train.align(self.y_train, join='inner', axis=0)
+        self.X_test, self.y_test = self.X_test.align(self.y_test, join='inner', axis=0)
+
+        best_params, self.model = self.tune_catboost(self.X_train, self.y_train)
+        self.model.fit(
+            self.X_train, self.y_train,
+            eval_set=(self.X_test, self.y_test),
+            use_best_model=True
+        )
+
+        # Plot training and validation loss
+        if hasattr(self.model, 'get_evals_result'):
+            evals_result = self.model.get_evals_result()
+            train_loss = evals_result['learn']['RMSE']
+            val_loss = evals_result['validation']['RMSE']
+            plt.figure(figsize=(10, 5))
+            plt.plot(train_loss, label='Training RMSE')
+            plt.plot(val_loss, label='Validation RMSE')
+            plt.xlabel('Iteration')
+            plt.ylabel('RMSE')
+            plt.title('CatBoost Training and Validation Loss')
+            plt.legend()
+            plt.grid(True, linestyle='--', alpha=0.3)
+            plt.tight_layout()
+            plt.show()
+
+        # Create a DataFrame for the test set
+        test = pd.DataFrame(self.X_test.copy())
+        test[self.target] = scaler.inverse_transform(self.y_test.values.reshape(-1, 1)).flatten()  # Inverse transform y_test
+        test['prediction'] = scaler.inverse_transform(self.model.predict(self.X_test).reshape(-1, 1)).flatten()  # Inverse transform predictions
+        self.data = self.data.merge(test[['prediction']], how='left', left_index=True, right_index=True)
+        self.data.dropna(inplace=True)  # Drop rows with NaN values
+        
+        # Plot the results
+        ax = test[[self.target]].plot(figsize=(15, 5))
+        test['prediction'].plot(ax=ax, style='--')
+        plt.legend(['Truth Data', 'Predictions'])
+        ax.set_title('XGBOOST: Raw Data and Prediction')
+        plt.show()
+
+        # Calculate MAE
+        mae = mean_absolute_error(test[self.target], test['prediction'])
+        print(f'MAE Score on Test set: {mae:0.2f}')
+        # Calculate RMSE
+        score = np.sqrt(mean_squared_error(test[self.target], test['prediction']))
+        print(f'RMSE Score on Test set: {score:0.2f}')
+        # Calculate R^2 Score
+        r_square = r2_score(test[self.target], test['prediction'])
+        print(f'R^2 Score on Test set: {r_square:0.2f}')
+        print("Mean of y_test:", test[self.target].mean())  # Use inverse-transformed y_test
+        print("Standard Deviation of y_test:", test[self.target].std())  # Use inverse-transformed y_test
+        print("Mean of y_train:", self.y_train.mean())  # Use inverse-transformed y_test
+        print("Standard Deviation of y_train:", self.y_train.std())  # Use inverse-transformed y_test
+        relative_error = (score / test[self.target].mean()) * 100
+        print(f"Relative Error(RMSE): {relative_error:.2f}%")
+        relative_error_mae = (mae / test[self.target].mean()) * 100
+        print(f"Relative Error(MAE): {relative_error_mae:.2f}%")  
+
+    def tune_catboost(self, X_train, y_train):
+        """
+        Perform hyperparameter tuning for CatBoostRegressor using RandomizedSearchCV.
+
+        Args:
+            X_train (pd.DataFrame): Training features.
+            y_train (pd.Series): Training target.
+
+        Returns:
+            dict: Best parameters from the search.
+            CatBoostRegressor: Best CatBoost model.
+        """
+        param_grid = {
+            'iterations': [200, 300, 500],
+            'learning_rate': [0.01, 0.03, 0.05, 0.1],
+            'depth': [4, 6, 8, 10],
+            'l2_leaf_reg': [1, 3, 5, 7, 9],
+            'bagging_temperature': [0, 1, 2, 5],
+            'border_count': [32, 64, 128]
+        }
+
+        cat_model = CatBoostRegressor(loss_function='RMSE', verbose=0, random_state=42)
+        kf = KFold(n_splits=4, shuffle=True, random_state=0)
+
+        random_search = RandomizedSearchCV(
+            estimator=cat_model,
+            param_distributions=param_grid,
+            n_iter=20,
+            scoring='neg_mean_squared_error',
+            cv=kf,
+            verbose=2,
+            n_jobs=-1,
+            random_state=42
+        )
+
+        random_search.fit(X_train, y_train)
+        best_params = random_search.best_params_
+        best_model = random_search.best_estimator_
+
+        print("Best CatBoost Parameters:", best_params)
+        print("Best CatBoost RMSE (negative MSE):", np.sqrt(-random_search.best_score_))
+
+        return best_params, best_model
+
     def model_randomforest(self):
         print("Fitting Random Forest model...")
 
@@ -438,6 +594,20 @@ class ModelBuilding:
         # Tune and train the model
         best_params, self.model = self.tune_randomforest(self.X_train, self.y_train)
         self.model.fit(self.X_train, self.y_train)
+
+         # Calculate training and validation RMSE
+        y_train_pred = self.model.predict(self.X_train)
+        y_test_pred = self.model.predict(self.X_test)
+        train_mse = mean_squared_error(scaler.inverse_transform(self.y_train.values.reshape(-1, 1)), scaler.inverse_transform(y_train_pred.reshape(-1, 1)))
+        val_mse = mean_squared_error(scaler.inverse_transform(self.y_test.values.reshape(-1, 1)), scaler.inverse_transform(y_test_pred.reshape(-1, 1)))
+
+        # Bar plot for RMSE
+        plt.figure(figsize=(6, 4))
+        plt.bar(['Train RMSE', 'Validation RMSE'], [train_mse, val_mse], color=['blue', 'orange'])
+        plt.title('Random Forest RMSE')
+        plt.ylabel('RMSE')
+        plt.show()
+
 
         # Feature Importance
         importances = self.model.feature_importances_
@@ -476,10 +646,15 @@ class ModelBuilding:
         # Calculate RMSE
         score = np.sqrt(mean_squared_error(test[self.target], test['prediction']))
         print(f'RMSE Score on Test set: {score:0.2f}')
+        # Calculate R^2 Score
+        r_square = r2_score(test[self.target], test['prediction'])
+        print(f'R^2 Score on Test set: {r_square:0.2f}')
         print("Mean of y_test:", test[self.target].mean())
         print("Standard Deviation of y_test:", test[self.target].std())
         relative_error = (score / test[self.target].mean()) * 100
         print(f"Relative Error (RMSE): {relative_error:.2f}%")
+        relative_error_mae = (mae / test[self.target].mean()) * 100
+        print(f"Relative Error(MAE): {relative_error_mae:.2f}%")
 
     def tune_randomforest(self, X_train, y_train):
         """
@@ -563,6 +738,20 @@ class ModelBuilding:
         best_params, self.model = self.tune_svr(self.X_train, self.y_train)
         self.model.fit(self.X_train, self.y_train)
 
+        # Calculate training and validation RMSE
+        y_train_pred = self.model.predict(self.X_train)
+        y_test_pred = self.model.predict(self.X_test)
+        train_mse = mean_squared_error(scaler.inverse_transform(self.y_train.values.reshape(-1, 1)), scaler.inverse_transform(y_train_pred.reshape(-1, 1)))
+        val_mse = mean_squared_error(scaler.inverse_transform(self.y_test.values.reshape(-1, 1)), scaler.inverse_transform(y_test_pred.reshape(-1, 1)))
+
+        # Bar plot for RMSE
+        plt.figure(figsize=(6, 4))
+        plt.bar(['Train RMSE', 'Validation RMSE'], [train_mse, val_mse], color=['blue', 'orange'])
+        plt.title('Random Forest RMSE')
+        plt.ylabel('RMSE')
+        plt.show()
+
+
         # Predict
         y_pred_scaled = self.model.predict(self.X_test)
 
@@ -602,10 +791,15 @@ class ModelBuilding:
         # Calculate RMSE
         rmse = np.sqrt(mean_squared_error(test[self.target], test['prediction']))
         print(f'RMSE Score on Test set: {rmse:0.2f}')
+        # Calculate R^2 Score
+        r_square = r2_score(test[self.target], test['prediction'])
+        print(f'R^2 Score on Test set: {r_square:0.2f}')
         print("Mean of y_test:", test[self.target].mean())
         print("Standard Deviation of y_test:", test[self.target].std())
         relative_error = (rmse / test[self.target].mean()) * 100
         print(f"Relative Error (RMSE): {relative_error:.2f}%")
+        relative_error_mae = (mae / test[self.target].mean()) * 100
+        print(f"Relative Error(MAE): {relative_error_mae:.2f}%")
 
     def tune_svr(self, X_train, y_train):
         """
@@ -656,8 +850,6 @@ class ModelBuilding:
 
         return best_params, best_model
     
-
-
     def train_cnn(self):
         # === 1. Förbered data ===
         scaler = MinMaxScaler()
@@ -1064,3 +1256,120 @@ class ModelBuilding:
         print(f"Relative Error (MAE): {mae / np.mean(y_actual) * 100:.2f}%")
         print(f"Mean: {np.mean(y_actual):.2f}")
         print(f"Std: {np.std(y_actual):.2f}")
+
+def train_gru(self):
+        print("Tuning GRU model with KerasTuner...")
+        TIME_STEPS = 48  # 1 day for 30-min data
+        EPOCHS = 30
+        BATCH_SIZE = 32
+        tuner_dir = 'gru_tuning'
+        if os.path.exists(tuner_dir):
+            shutil.rmtree(tuner_dir)
+        # Feature engineering (same as before)
+        X_train = self.X_train.copy()
+        X_test = self.X_test.copy()
+        y_train = self.y_train.copy()
+        y_test = self.y_test.copy()
+
+        for lag in range(1, 3):
+            X_train[f'cpu_lag_{lag}'] = y_train.shift(lag)
+            X_test[f'cpu_lag_{lag}'] = y_test.shift(lag)
+        X_train['cpu_rolling_mean_3'] = y_train.rolling(window=3).mean()
+        X_test['cpu_rolling_mean_3'] = y_test.rolling(window=3).mean()
+        X_train['cpu_rolling_std_3'] = y_train.rolling(window=3).std()
+        X_test['cpu_rolling_std_3'] = y_test.rolling(window=3).std()
+
+        # Drop NaNs from X and y together
+        train_df = X_train.copy()
+        train_df['y'] = y_train
+        train_df = train_df.dropna()
+        X_train = train_df.drop(columns=['y'])
+        y_train = train_df['y']
+
+        test_df = X_test.copy()
+        test_df['y'] = y_test
+        test_df = test_df.dropna()
+        X_test = test_df.drop(columns=['y'])
+        y_test = test_df['y']
+
+        # Scale target
+        scaler = MinMaxScaler()
+        y_train_scaled = scaler.fit_transform(y_train.values.reshape(-1, 1)).flatten()
+        y_test_scaled = scaler.transform(y_test.values.reshape(-1, 1)).flatten()
+
+        # Create sequences
+        def create_sequences(X, y, time_steps):
+            Xs, ys = [], []
+            for i in range(len(X) - time_steps):
+                Xs.append(X.iloc[i:i + time_steps].values)
+                ys.append(y[i + time_steps])
+            return np.array(Xs), np.array(ys)
+
+        X_train_seq, y_train_seq = create_sequences(X_train, pd.Series(y_train_scaled, index=y_train.index), TIME_STEPS)
+        X_test_seq, y_test_seq = create_sequences(X_test, pd.Series(y_test_scaled, index=y_test.index), TIME_STEPS)
+
+        # Time-based validation split
+        split = int(len(X_train_seq) * 0.8)
+        X_train_sub, X_val = X_train_seq[:split], X_train_seq[split:]
+        y_train_sub, y_val = y_train_seq[:split], y_train_seq[split:]
+
+        model = Sequential([
+            GRU(32, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.001),
+                input_shape=(TIME_STEPS, X_train_seq.shape[2]), return_sequences=True),
+            GRU(16, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.001)),
+            Dense(1)
+        ])
+        model.compile(optimizer='adam', loss='mse')
+
+        early_stop = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
+
+        history = model.fit(
+            X_train_sub, y_train_sub,
+            epochs=EPOCHS,
+            batch_size=BATCH_SIZE,
+            validation_data=(X_val, y_val),
+            callbacks=[early_stop],
+            verbose=1
+        )
+
+        self.model = model
+        # Predict
+        y_pred_scaled = self.model.predict(X_test_seq)
+        y_pred = scaler.inverse_transform(y_pred_scaled)
+        test_index = y_test.index[TIME_STEPS:]
+
+        # Plot
+        plt.figure(figsize=(15, 5))
+        plt.plot(test_index, y_test.iloc[TIME_STEPS:], label='Actual')
+        plt.plot(test_index, y_pred.flatten(), label='Predicted')
+        plt.legend()
+        plt.title('Tuned GRU Prediction vs Actual')
+        plt.show()
+
+        # Plot training and validation loss
+        
+        if hasattr(history, 'history'):
+            plt.figure(figsize=(12, 5))
+            plt.plot(history.history['loss'], label='Training Loss')
+            plt.plot(history.history['val_loss'], label='Validation Loss')
+            plt.title("Training vs Validation Loss (Tuned GRU)")
+            plt.xlabel("Epoch")
+            plt.ylabel("Loss (MSE)")
+            plt.legend()
+            plt.grid(True)
+            plt.tight_layout()
+            plt.show()
+
+        # Metrics
+        rmse = np.sqrt(mean_squared_error(y_test.iloc[TIME_STEPS:], y_pred.flatten()))
+        mae = mean_absolute_error(y_test.iloc[TIME_STEPS:], y_pred.flatten())
+        r_score = r2_score(y_test.iloc[TIME_STEPS:], y_pred.flatten())
+        mean_actual = y_test.iloc[TIME_STEPS:].mean()
+        relative_error_rmse = (rmse / mean_actual) * 100
+        relative_error_mae = (mae / mean_actual) * 100
+        print(f"RMSE: {rmse:.2f}")
+        print(f"MAE: {mae:.2f}")
+        print(f"R^2 Score: {r_score:.2f}")
+        print(f"Relative Error (RMSE): {relative_error_rmse:.2f}%")
+        print(f"Relative Error (MAE): {relative_error_mae:.2f}%")
+        
