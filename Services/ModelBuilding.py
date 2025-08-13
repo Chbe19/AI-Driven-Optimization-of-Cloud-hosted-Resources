@@ -21,9 +21,9 @@ import torch
 import torch.nn as nn
 
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Conv1D, MaxPooling1D, Flatten, Dropout, GRU
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.models import Sequential # type: ignore
+from tensorflow.keras.layers import LSTM, Dense, Conv1D, MaxPooling1D, Flatten, Dropout, GRU # type: ignore
+from tensorflow.keras.callbacks import EarlyStopping # type: ignore
 import keras_tuner as kt
 
 
@@ -504,7 +504,9 @@ class ModelBuilding:
         print("Mean of y_train:", self.y_train.mean())  # Use inverse-transformed y_test
         print("Standard Deviation of y_train:", self.y_train.std())  # Use inverse-transformed y_test
         relative_error = (score / test[self.target].mean()) * 100
-        print(f"Relative Error(RMSE): {relative_error:.2f}%")        
+        print(f"Relative Error(RMSE): {relative_error:.2f}%")
+        relative_error_mae = (mae / test[self.target].mean()) * 100
+        print(f"Relative Error(MAE): {relative_error_mae:.2f}%")        
 
     def tune_xgboost(self, X_train, y_train):
         """
@@ -633,7 +635,9 @@ class ModelBuilding:
         print("Mean of y_train:", self.y_train.mean())  # Use inverse-transformed y_test
         print("Standard Deviation of y_train:", self.y_train.std())  # Use inverse-transformed y_test
         relative_error = (score / test[self.target].mean()) * 100
-        print(f"Relative Error(RMSE): {relative_error:.2f}%")       
+        print(f"Relative Error(RMSE): {relative_error:.2f}%")
+        relative_error_mae = (mae / test[self.target].mean()) * 100
+        print(f"Relative Error(MAE): {relative_error_mae:.2f}%")  
 
     def tune_catboost(self, X_train, y_train):
         """
@@ -768,6 +772,8 @@ class ModelBuilding:
         print("Standard Deviation of y_test:", test[self.target].std())
         relative_error = (score / test[self.target].mean()) * 100
         print(f"Relative Error (RMSE): {relative_error:.2f}%")
+        relative_error_mae = (mae / test[self.target].mean()) * 100
+        print(f"Relative Error(MAE): {relative_error_mae:.2f}%")
 
     def tune_randomforest(self, X_train, y_train):
         """
@@ -899,6 +905,8 @@ class ModelBuilding:
         print("Standard Deviation of y_test:", test[self.target].std())
         relative_error = (rmse / test[self.target].mean()) * 100
         print(f"Relative Error (RMSE): {relative_error:.2f}%")
+        relative_error_mae = (mae / test[self.target].mean()) * 100
+        print(f"Relative Error(MAE): {relative_error_mae:.2f}%")
 
     def tune_svr(self, X_train, y_train):
         """
@@ -1339,6 +1347,12 @@ class ModelBuilding:
         rmse = np.sqrt(mean_squared_error(y_test.iloc[TIME_STEPS:], y_pred.flatten()))
         mae = mean_absolute_error(y_test.iloc[TIME_STEPS:], y_pred.flatten())
         r_score = r2_score(y_test.iloc[TIME_STEPS:], y_pred.flatten())
+        mean_actual = y_test.iloc[TIME_STEPS:].mean()
+        relative_error_rmse = (rmse / mean_actual) * 100
+        relative_error_mae = (mae / mean_actual) * 100
         print(f"RMSE: {rmse:.2f}")
         print(f"MAE: {mae:.2f}")
         print(f"R^2 Score: {r_score:.2f}")
+        print(f"Relative Error (RMSE): {relative_error_rmse:.2f}%")
+        print(f"Relative Error (MAE): {relative_error_mae:.2f}%")
+        

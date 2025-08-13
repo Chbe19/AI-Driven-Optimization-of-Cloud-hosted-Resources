@@ -36,16 +36,16 @@ def main():
     #        'memory',
     #        dataPost
     #    )
-    # model_gru = ModelBuilding(
-    #     "gru",
-    #     train_x,
-    #     train_y,
-    #     test_x,
-    #     test_y,
-    #     data.features,
-    #     'memory',
-    #     dataPost
-    #  )
+    model_gru = ModelBuilding(
+         "gru",
+         train_x,
+         train_y,
+         test_x,
+         test_y,
+         data.features,
+         'memory',
+         dataPost
+      )
 
     # model_arima = ModelBuilding(
     #       model_type="arima",
