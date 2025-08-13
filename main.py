@@ -16,16 +16,16 @@ def main():
     test_x, test_y = data.get_testing_set('memory')
     dataPost = data.get_data_frame()
     
-    model_xgboost = ModelBuilding(
-           "xgboost",
-           train_x,
-           train_y,
-           test_x,
-           test_y,
-           data.features,
-           'memory',
-           dataPost
-       )   
+    # model_xgboost = ModelBuilding(
+    #        "xgboost",
+    #        train_x,
+    #        train_y,
+    #        test_x,
+    #        test_y,
+    #        data.features,
+    #        'memory',
+    #        dataPost
+    #    )   
     # model_catboost = ModelBuilding(
     #        "catboost",
     #        train_x,
@@ -36,16 +36,16 @@ def main():
     #        'memory',
     #        dataPost
     #    )
-    # model_gru = ModelBuilding(
-    #      "gru",
-    #      train_x,
-    #      train_y,
-    #      test_x,
-    #      test_y,
-    #      data.features,
-    #      'memory',
-    #      dataPost
-    #   )
+    model_gru = ModelBuilding(
+         "gru",
+         train_x,
+         train_y,
+         test_x,
+         test_y,
+         data.features,
+         'memory',
+         dataPost
+      )
 
     # model_arima = ModelBuilding(
     #       model_type="arima",
