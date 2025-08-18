@@ -88,16 +88,16 @@ def main():
     #     dataPost
     #  )
 
-    model_cnn = ModelBuilding(
-        "cnn",
-        train_x,
-        train_y,
-        test_x,
-        test_y,
-        data.features,
-        'memory',
-        dataPost
-    )
+    # model_cnn = ModelBuilding(
+    #     "cnn",
+    #     train_x,
+    #     train_y,
+    #     test_x,
+    #     test_y,
+    #     data.features,
+    #     'memory',
+    #     dataPost
+    # )
 
     # model_cnn_lstm = ModelBuilding(
     #  "cnn-lstm",
@@ -110,16 +110,16 @@ def main():
     #  dataPost
     #  )
 
-    # model_cnn_lstm = ModelBuilding(
-    #  "autoencoder",
-    #  train_x,
-    #  train_y,
-    #  test_x,
-    #  test_y,
-    #  data.features,
-    #  'cpu',
-    #  dataPost
-    #  )
+    model_cnn_lstm = ModelBuilding(
+     "autoencoder",
+     train_x,
+     train_y,
+     test_x,
+     test_y,
+     data.features,
+     'memory',
+     dataPost
+     )
 
 
 

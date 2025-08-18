@@ -941,8 +941,10 @@ class ModelBuilding:
         # === 11. Metrics ===
         rmse = np.sqrt(mean_squared_error(y_actual, y_pred))
         mae = mean_absolute_error(y_actual, y_pred)
+        r_score = r2_score(y_actual, y_pred)
         print(f"RMSE: {rmse:.2f}")
         print(f"MAE: {mae:.2f}")
+        print(f"R^2 Score: {r_score:.2f}")
         print(f"Relative Error (RMSE): {rmse / np.mean(y_actual) * 100:.2f}%")
         print(f"Relative Error (MAE): {mae / np.mean(y_actual) * 100:.2f}%")
         print(f"Mean: {np.mean(y_actual):.2f}")
@@ -1051,8 +1053,10 @@ class ModelBuilding:
         # === 11. Utvärdering ===
         rmse = np.sqrt(mean_squared_error(y_actual, y_pred))
         mae = mean_absolute_error(y_actual, y_pred)
+        r_score = r2_score(y_actual, y_pred)
         print(f"RMSE: {rmse:.2f}")
         print(f"MAE: {mae:.2f}")
+        print(f"R^2 Score: {r_score:.2f}")
         print(f"Relative Error (RMSE): {rmse / np.mean(y_actual) * 100:.2f}%")
         print(f"Relative Error (MAE): {mae / np.mean(y_actual) * 100:.2f}%")
         print(f"Mean: {np.mean(y_actual):.2f}")
@@ -1150,8 +1154,10 @@ class ModelBuilding:
         # === 11. Utvärdering ===
         rmse = np.sqrt(mean_squared_error(y_actual, y_pred))
         mae = mean_absolute_error(y_actual, y_pred)
+        r_score = r2_score(y_actual, y_pred)
         print(f"RMSE: {rmse:.2f}")
         print(f"MAE: {mae:.2f}")
+        print(f"R^2 Score: {r_score:.2f}")
         print(f"Relative Error (RMSE): {rmse / np.mean(y_actual) * 100:.2f}%")
         print(f"Relative Error (MAE): {mae / np.mean(y_actual) * 100:.2f}%")
         print(f"Mean: {np.mean(y_actual):.2f}")
@@ -1249,8 +1255,10 @@ class ModelBuilding:
         # === 10. Utvärdering
         rmse = np.sqrt(mean_squared_error(y_actual, y_pred))
         mae = mean_absolute_error(y_actual, y_pred)
+        r_score = r2_score(y_actual, y_pred)
         print(f"RMSE: {rmse:.2f}")
         print(f"MAE: {mae:.2f}")
+        print(f"R^2 Score: {r_score:.2f}")
         print(f"Relative Error (RMSE): {rmse / np.mean(y_actual) * 100:.2f}%")
         print(f"Relative Error (MAE): {mae / np.mean(y_actual) * 100:.2f}%")
         print(f"Mean: {np.mean(y_actual):.2f}")
